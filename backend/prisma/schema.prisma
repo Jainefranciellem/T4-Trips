@@ -1,0 +1,194 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// Perfis da spec (seção 3). As permissões de cada perfil ficam em
+// src/lib/permissions.ts — o mapa perfil→permissões é código, não dado, pra
+// não ter como um perfil ficar sem permissão por falta de seed.
+enum Role {
+  ADMIN
+  OPERADOR
+  FINANCEIRO
+  VISUALIZADOR
+}
+
+enum UserStatus {
+  ATIVO
+  INATIVO
+}
+
+enum CustomerStatus {
+  ATIVO
+  ARQUIVADO
+}
+
+enum TripStatus {
+  PLANEJADA
+  ABERTA
+  LOTADA
+  EM_ANDAMENTO
+  CONCLUIDA
+  CANCELADA
+  ARQUIVADA
+}
+
+enum TripAccessLevel {
+  VISUALIZAR
+  OPERAR
+}
+
+// Valores monetários sempre em centavos (Int) — spec 7.1.
+// Datas em timestamptz (DateTime do Prisma/Postgres já é UTC).
+
+model User {
+  id                 String     @id @default(uuid())
+  name               String
+  email              String     @unique
+  password_hash      String
+  role               Role       @default(OPERADOR)
+  status             UserStatus @default(ATIVO)
+  // Permissão extra pra Visualizador/Operador ver CPF e dados sensíveis.
+  can_view_sensitive Boolean    @default(false)
+  failed_login_count Int        @default(0)
+  locked_until       DateTime?
+  last_login_at      DateTime?
+  created_at         DateTime   @default(now())
+  updated_at         DateTime   @updatedAt
+
+  trips_access    TripUser[]
+  trips           Trip[]               @relation("TripCreatedBy")
+  audit_logs      AuditLog[]
+  password_resets PasswordResetToken[]
+}
+
+// Recuperação de senha (RF-001). Só o hash do token fica no banco; o token em
+// si vai no link do e-mail e vale uma vez.
+model PasswordResetToken {
+  id         String    @id @default(uuid())
+  user_id    String
+  token_hash String    @unique
+  expires_at DateTime
+  used_at    DateTime?
+  created_at DateTime  @default(now())
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+}
+
+model Customer {
+  id                      String         @id @default(uuid())
+  full_name               String
+  cpf                     String?        @unique
+  birth_date              DateTime?      @db.Date
+  whatsapp                String?
+  phone                   String?
+  email                   String?
+  city                    String?
+  state                   String?
+  emergency_contact_name  String?
+  emergency_contact_phone String?
+  guardian_name           String?
+  guardian_phone          String?
+  notes                   String?
+  status                  CustomerStatus @default(ATIVO)
+  created_at              DateTime       @default(now())
+  updated_at              DateTime       @updatedAt
+  archived_at             DateTime?
+
+  relationships CustomerRelationship[] @relation("CustomerOwner")
+  related_to    CustomerRelationship[] @relation("CustomerRelated")
+
+  @@index([full_name])
+  @@index([phone])
+  @@index([email])
+}
+
+model CustomerRelationship {
+  id                  String   @id @default(uuid())
+  customer_id         String
+  related_customer_id String
+  relationship_type   String
+  group_name          String?
+  created_at          DateTime @default(now())
+
+  customer         Customer @relation("CustomerOwner", fields: [customer_id], references: [id])
+  related_customer Customer @relation("CustomerRelated", fields: [related_customer_id], references: [id])
+
+  @@unique([customer_id, related_customer_id])
+}
+
+model Trip {
+  id                    String     @id @default(uuid())
+  name                  String
+  destination           String
+  departure_at          DateTime
+  return_at             DateTime
+  departure_location    String
+  commercial_capacity   Int
+  default_package_price Int // centavos
+  description           String?
+  included_services     String?
+  optional_services     String?
+  internal_notes        String?
+  public_instructions   String?
+  cancellation_policy   String?
+  cover_image_url       String?
+  waitlist_enabled      Boolean    @default(false)
+  // Configuração de vagas (RF-014) — usada quando as reservas forem implementadas.
+  pending_holds_seat    Boolean    @default(true)
+  reservation_ttl_hours Int?
+  status                TripStatus @default(PLANEJADA)
+  // Status antes de arquivar, pra "restaurar" voltar ao ponto certo.
+  previous_status       TripStatus?
+  created_by            String
+  created_at            DateTime   @default(now())
+  updated_at            DateTime   @updatedAt
+  archived_at           DateTime?
+  cancelled_at          DateTime?
+
+  creator User       @relation("TripCreatedBy", fields: [created_by], references: [id])
+  users   TripUser[]
+
+  @@index([destination])
+  @@index([departure_at])
+  @@index([status])
+}
+
+// Quem pode enxergar/operar cada viagem (spec 6.9). ADMIN enxerga todas.
+model TripUser {
+  trip_id      String
+  user_id      String
+  access_level TripAccessLevel @default(OPERAR)
+
+  trip Trip @relation(fields: [trip_id], references: [id], onDelete: Cascade)
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@id([trip_id, user_id])
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  user_id     String?
+  entity_type String
+  entity_id   String
+  action      String
+  old_values  Json?
+  new_values  Json?
+  reason      String?
+  ip_address  String?
+  user_agent  String?
+  created_at  DateTime @default(now())
+
+  user User? @relation(fields: [user_id], references: [id])
+
+  @@index([entity_type, entity_id])
+  @@index([created_at])
+}

@@ -1,0 +1,16 @@
+{
+  "name": "T4 Trips Manager",
+  "short_name": "T4 Trips",
+  "description": "Gestão de excursões e viagens de surf da T4 Trips",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#111821",
+  "theme_color": "#f47b20",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "/icon-180.png", "sizes": "180x180", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
