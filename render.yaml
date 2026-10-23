@@ -1,15 +1,21 @@
+# API no Render (plano gratuito). O banco fica no Neon (Postgres gratuito,
+# sem prazo de validade): DATABASE_URL é a conexão com pooler e DIRECT_URL a
+# direta, usada pelas migrações. Passo a passo em docs/implantacao.md.
 services:
   - type: web
     name: t4trips-api
     runtime: docker
+    plan: free
     rootDir: backend
     dockerfilePath: ./Dockerfile
     healthCheckPath: /health
     envVars:
+      - key: NODE_ENV
+        value: production
       - key: DATABASE_URL
-        fromDatabase:
-          name: t4trips-db
-          property: connectionString
+        sync: false
+      - key: DIRECT_URL
+        sync: false
       - key: PORT
         value: 3333
       - key: CORS_ORIGIN
@@ -18,10 +24,6 @@ services:
         generateValue: true
       - key: JWT_REFRESH_SECRET
         generateValue: true
-      - key: INTERNAL_JOB_SECRET
-        generateValue: true
-      - key: REMINDER_JOB_CRON
-        value: "*/15 * * * *"
       - key: APP_URL
         sync: false
       - key: API_URL
@@ -39,7 +41,5 @@ services:
         sync: false
       - key: RESEND_API_KEY
         sync: false
-
-databases:
-  - name: t4trips-db
-    plan: free
+      - key: EMAIL_FROM
+        sync: false

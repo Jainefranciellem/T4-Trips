@@ -4,8 +4,8 @@ import { cn } from '@/lib/utils';
 export function Logo({ className, subtitle = true }: { className?: string; subtitle?: boolean }) {
   return (
     <div className={cn('flex items-center gap-3', className)}>
-      <div className="w-11 h-11 rounded-xl bg-primary flex items-center justify-center shadow-ocean">
-        <span className="text-primary-foreground font-black text-lg tracking-tight">T4</span>
+      <div className="w-11 h-11 rounded-xl bg-brand flex items-center justify-center shadow-ocean" aria-hidden>
+        <span className="text-secondary font-black text-lg tracking-tight">T4</span>
       </div>
       <div className="leading-tight">
         <p className="font-bold tracking-wide">T4 TRIPS</p>

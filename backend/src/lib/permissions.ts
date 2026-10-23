@@ -24,6 +24,7 @@ export const PERMISSIONS = [
   'audit.read',
   'links.revoke',
   'sensitive.view',
+  'privacy.manage',
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];

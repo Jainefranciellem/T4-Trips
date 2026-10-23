@@ -17,7 +17,7 @@ const buttonVariants = cva(
         link: "text-primary underline-offset-4 hover:underline",
         success: "bg-success text-success-foreground hover:bg-success/90 shadow-md",
         warning: "bg-warning text-warning-foreground hover:bg-warning/90 shadow-md",
-        ocean: "bg-gradient-to-r from-primary to-[#d9620a] text-primary-foreground hover:opacity-90 shadow-lg",
+        ocean: "bg-gradient-to-r from-primary to-[#9a4708] text-primary-foreground hover:opacity-90 shadow-lg",
         glass: "bg-card/80 backdrop-blur-xl border border-border/50 hover:bg-card/90 text-foreground",
       },
       size: {

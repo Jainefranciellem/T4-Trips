@@ -183,6 +183,9 @@ model Customer {
   created_at              DateTime       @default(now())
   updated_at              DateTime       @updatedAt
   archived_at             DateTime?
+  // LGPD: dados pessoais apagados a pedido do titular; o histórico
+  // financeiro continua, sem identificar a pessoa.
+  anonymized_at           DateTime?
 
   reservations  Reservation[]
   relationships CustomerRelationship[] @relation("CustomerOwner")

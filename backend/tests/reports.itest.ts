@@ -203,3 +203,26 @@ describe('relatórios (RF-022)', () => {
     expect((await report('admin', 'nao-existe')).statusCode).toBe(404);
   });
 });
+
+describe('viagem concluída (CA-022 / RN-015)', () => {
+  it('continua consultável com tudo e não recebe novas reservas', async () => {
+    expect((await inject('admin', 'PATCH', `/trips/${tripId}`, { status: 'CONCLUIDA' })).json().status).toBe('CONCLUIDA');
+    const checks: [string, string, (b: unknown) => boolean][] = [
+      ['operador', `/trips/${tripId}/reservations`, (b) => (b as unknown[]).length === 3],
+      ['operador', `/trips/${tripId}/vehicles`, (b) => (b as { counts: { occupied: number } }[])[0].counts.occupied === 2],
+      ['operador', `/trips/${tripId}/accommodations`, (b) => (b as { counts: { guests: number } }[])[0].counts.guests === 3],
+      ['operador', `/trips/${tripId}/itinerary`, (b) => (b as unknown[]).length > 0],
+      ['financeiro', `/trips/${tripId}/payments`, (b) => (b as unknown[]).length === 2],
+      ['financeiro', `/trips/${tripId}/expenses`, (b) => (b as unknown[]).length === 1],
+      ['financeiro', `/trips/${tripId}/finance-dashboard`, (b) => (b as { revenue_received: number }).revenue_received === 200000],
+    ];
+    for (const [who, url, ok] of checks) {
+      const r = await inject(who, 'GET', url);
+      expect(r.statusCode, url).toBe(200);
+      expect(ok(r.json()), url).toBe(true);
+    }
+    expect((await report('financeiro', 'lucro')).statusCode).toBe(200);
+    const c = (await inject('admin', 'POST', '/customers', { full_name: 'Depois da viagem' })).json();
+    expect((await inject('admin', 'POST', `/trips/${tripId}/reservations`, { customer_id: c.id })).statusCode).toBe(409);
+  });
+});

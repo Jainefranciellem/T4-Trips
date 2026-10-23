@@ -5,7 +5,10 @@
 @layer base {
   :root {
     /* Identidade T4 Trips (spec 1.4): laranja, preto e branco.
-       Laranja #F47B20 · Grafite #111821 · Branco */
+       Laranja da marca #F47B20 (--brand) · Grafite #111821 · Branco.
+       --primary é o laranja escurecido #B8550A: texto branco sobre ele dá
+       4,8:1 e ele como texto sobre o fundo dá 4,5:1 (WCAG 2.1 AA). */
+    --brand: 26 90% 54%;
     --background: 30 20% 97%;
     --foreground: 214 27% 9%;
 
@@ -15,7 +18,9 @@
     --popover: 0 0% 100%;
     --popover-foreground: 214 27% 9%;
 
-    --primary: 26 90% 54%;
+    --primary: 26 90% 38%;
+    /* Laranja de texto sobre fundo laranja-claro (selos). */
+    --primary-strong: 26 90% 30%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 214 27% 9%;
@@ -33,23 +38,25 @@
     --success: 152 60% 28%;
     --success-foreground: 0 0% 100%;
 
-    --warning: 38 92% 38%;
+    --warning: 38 92% 30%;
     --warning-foreground: 0 0% 100%;
 
     --border: 30 10% 88%;
     --input: 30 10% 84%;
-    --ring: 26 90% 54%;
+    --ring: 26 90% 38%;
 
     --radius: 0.75rem;
 
     --sidebar-background: 214 27% 9%;
     --sidebar-foreground: 30 15% 85%;
-    --sidebar-primary: 26 90% 54%;
+    --sidebar-primary: 26 90% 38%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 214 22% 15%;
     --sidebar-accent-foreground: 0 0% 100%;
     --sidebar-border: 214 20% 16%;
     --sidebar-ring: 26 90% 54%;
+    /* Texto laranja sobre o fundo escuro da barra lateral. */
+    --sidebar-brand-text: 26 90% 62%;
 
     --shadow-sm: 0 1px 2px 0 rgba(17, 24, 33, 0.06);
     --shadow-md: 0 4px 10px -2px rgba(17, 24, 33, 0.1);
@@ -70,6 +77,6 @@
 
 @layer utilities {
   .gradient-ocean {
-    @apply bg-gradient-to-r from-[#F47B20] to-[#d9620a];
+    @apply bg-gradient-to-r from-[#B8550A] to-[#9a4708];
   }
 }

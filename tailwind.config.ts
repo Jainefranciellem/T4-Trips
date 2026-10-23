@@ -23,6 +23,9 @@ export default {
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
+        // Laranja original da marca, só para decoração (logo, barras). Texto e
+        // botões usam o primary, mais escuro, que passa no contraste AA.
+        brand: "hsl(var(--brand))",
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",

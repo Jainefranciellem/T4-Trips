@@ -23,7 +23,8 @@ export type Permission =
   | 'reports.financial'
   | 'audit.read'
   | 'links.revoke'
-  | 'sensitive.view';
+  | 'sensitive.view'
+  | 'privacy.manage';
 
 export interface SessionUser {
   id: string;
@@ -104,6 +105,7 @@ export interface Customer {
   guardian_phone: string | null;
   notes: string | null;
   status: 'ATIVO' | 'ARQUIVADO';
+  anonymized_at?: string | null;
 }
 
 export interface ManagedUser {
@@ -530,4 +532,28 @@ export interface ItineraryItem {
   public_instructions: string | null;
   internal_notes: string | null;
   is_public: boolean;
+}
+
+export interface CustomerLink {
+  id: string;
+  relationship_type: string;
+  group_name: string | null;
+  customer: { id: string; full_name: string };
+}
+
+export interface CustomerTrip {
+  reservation_id: string;
+  reservation_status: ReservationStatus;
+  created_at: string;
+  cancelled_at: string | null;
+  trip: { id: string; name: string; destination: string; departure_at: string; status: TripStatus };
+  final_price?: number;
+  paid?: number;
+  balance?: number;
+  financial_status?: FinancialStatus;
+}
+
+export interface PassengerGroup {
+  name: string | null;
+  members: { reservation_id: string; passenger_name: string }[];
 }

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Segmented } from '@/components/common/Segmented';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAuth } from '@/contexts/AuthContext';
 import { listReceivables, listTripPayments } from '@/lib/finance.service';
@@ -101,12 +101,15 @@ export function PaymentsPanel({ trip }: { trip: Trip }) {
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <Tabs value={view} onValueChange={setView}>
-          <TabsList>
-            <TabsTrigger value="passageiros">Por passageiro</TabsTrigger>
-            <TabsTrigger value="lancamentos">Lançamentos</TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <Segmented
+          label="Visão dos pagamentos"
+          value={view}
+          onChange={setView}
+          options={[
+            { value: 'passageiros', label: 'Por passageiro' },
+            { value: 'lancamentos', label: 'Lançamentos' },
+          ]}
+        />
         {view === 'passageiros' && (
           <>
             <div className="relative flex-1">

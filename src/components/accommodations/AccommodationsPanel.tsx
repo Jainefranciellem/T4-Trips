@@ -7,6 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { listReservations } from '@/lib/reservations.service';
+import { listTripGroups } from '@/lib/customers.service';
 import {
   addGuests,
   assignRoom,
@@ -43,6 +44,7 @@ export function AccommodationsPanel({ trip }: { trip: Trip }) {
 
   const accQuery = useQuery({ queryKey: ['trip-accommodations', trip.id], queryFn: () => listTripAccommodations(trip.id) });
   const resQuery = useQuery({ queryKey: ['reservations', trip.id], queryFn: () => listReservations(trip.id) });
+  const groupsQuery = useQuery({ queryKey: ['trip-groups', trip.id], queryFn: () => listTripGroups(trip.id) });
 
   const [addOpen, setAddOpen] = useState<{ addRoomsTo: TripAccommodation | null } | null>(null);
   const [guestsFor, setGuestsFor] = useState<TripRoom | null>(null);
@@ -281,6 +283,7 @@ export function AccommodationsPanel({ trip }: { trip: Trip }) {
       <AddGuestsDialog
         room={guestsFor}
         passengers={passengers}
+        groups={groupsQuery.data ?? []}
         busy={op.isPending}
         error={guestError}
         onClose={() => setGuestsFor(null)}

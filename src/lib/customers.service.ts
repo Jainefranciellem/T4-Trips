@@ -1,5 +1,5 @@
-import { apiFetch } from './api';
-import type { Customer } from '@/types';
+import { apiFetch, apiFetchFile } from './api';
+import type { Customer, CustomerLink, CustomerTrip, PassengerGroup } from '@/types';
 
 export interface CustomerList {
   total: number;
@@ -32,3 +32,23 @@ export const archiveCustomer = (id: string) =>
 
 export const restoreCustomer = (id: string) =>
   apiFetch<Customer>(`/customers/${id}/restore`, { method: 'POST' });
+
+export const listCustomerLinks = (id: string) => apiFetch<CustomerLink[]>(`/customers/${id}/relationships`);
+export const addCustomerLink = (id: string, payload: { related_customer_id: string; relationship_type: string; group_name: string | null }) =>
+  apiFetch(`/customers/${id}/relationships`, { method: 'POST', body: JSON.stringify(payload) });
+export const removeCustomerLink = (linkId: string) => apiFetch<void>(`/customer-relationships/${linkId}`, { method: 'DELETE' });
+export const listCustomerTrips = (id: string) => apiFetch<CustomerTrip[]>(`/customers/${id}/trips`);
+export const listTripGroups = (tripId: string) => apiFetch<PassengerGroup[]>(`/trips/${tripId}/groups`);
+
+// LGPD: baixa o arquivo com todos os dados do titular.
+export async function exportCustomerData(id: string) {
+  const { blob, filename } = await apiFetchFile(`/customers/${id}/export`);
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 30_000);
+}
+export const anonymizeCustomer = (id: string, reason: string) =>
+  apiFetch<{ ok: true }>(`/customers/${id}/anonymize`, { method: 'POST', body: JSON.stringify({ reason }) });

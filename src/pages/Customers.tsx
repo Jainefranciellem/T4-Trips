@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { CustomerFormDialog } from '@/components/customers/CustomerFormDialog';
+import { CustomerDetailDialog } from '@/components/customers/CustomerDetailDialog';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useDebounce } from '@/hooks/use-debounce';
@@ -25,6 +26,7 @@ const Customers = () => {
   const [page, setPage] = useState(1);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Customer | null>(null);
+  const [viewing, setViewing] = useState<Customer | null>(null);
   const q = useDebounce(search.trim());
 
   const { data, isLoading, isError, error } = useQuery({
@@ -52,12 +54,12 @@ const Customers = () => {
 
   const actions = (c: Customer) => (
     <div className="flex justify-end gap-1">
-      {canEdit && (
+      {canEdit && !c.anonymized_at && (
         <Button variant="ghost" size="icon-sm" onClick={() => open(c)} aria-label={`Editar ${c.full_name}`}>
           <Pencil className="h-4 w-4" />
         </Button>
       )}
-      {can('customers.archive') && (
+      {can('customers.archive') && !c.anonymized_at && (
         <Button
           variant="ghost"
           size="icon-sm"
@@ -131,7 +133,9 @@ const Customers = () => {
             {data!.items.map((c) => (
               <div key={c.id} className="rounded-xl border bg-card p-4 flex items-start justify-between gap-2">
                 <div className="min-w-0 text-sm">
-                  <p className="font-medium truncate">{c.full_name}</p>
+                  <button type="button" className="font-medium truncate hover:text-primary text-left" onClick={() => setViewing(c)}>
+                    {c.full_name}
+                  </button>
                   <p className="text-muted-foreground">{formatPhone(c.whatsapp ?? c.phone)}</p>
                   <p className="text-muted-foreground">{[c.city, c.state].filter(Boolean).join(' / ')}</p>
                   {c.status === 'ARQUIVADO' && <Badge variant="cancelled" className="mt-1">Arquivado</Badge>}
@@ -158,7 +162,9 @@ const Customers = () => {
                 {data!.items.map((c) => (
                   <TableRow key={c.id}>
                     <TableCell className="font-medium">
-                      {c.full_name}
+                      <button type="button" className="hover:text-primary text-left" onClick={() => setViewing(c)}>
+                        {c.full_name}
+                      </button>
                       {c.status === 'ARQUIVADO' && <Badge variant="cancelled" className="ml-2">Arquivado</Badge>}
                     </TableCell>
                     <TableCell>{formatCpf(c.cpf)}</TableCell>
@@ -189,6 +195,7 @@ const Customers = () => {
       )}
 
       <CustomerFormDialog open={formOpen} onOpenChange={setFormOpen} customer={editing} />
+      <CustomerDetailDialog customer={viewing} onClose={() => setViewing(null)} />
     </div>
   );
 };

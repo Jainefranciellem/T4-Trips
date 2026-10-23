@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '@/components/common/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Segmented } from '@/components/common/Segmented';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TripCard } from '@/components/trips/TripCard';
 import { TripFormDialog } from '@/components/trips/TripFormDialog';
@@ -66,15 +66,19 @@ const Trips = () => {
       />
 
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-6">
-        <Tabs value={group} onValueChange={(v) => setGroup(v as TripGroup)} className="overflow-x-auto">
-          <TabsList>
-            {groups.map((g) => (
-              <TabsTrigger key={g} value={g}>
+        <Segmented<TripGroup>
+          label="Situação das viagens"
+          value={group}
+          onChange={setGroup}
+          options={groups.map((g) => ({
+            value: g,
+            label: (
+              <>
                 {tripGroupLabel[g]} <span className="ml-1.5 text-xs opacity-70">{counts[g]}</span>
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
+              </>
+            ),
+          }))}
+        />
         <div className="relative md:w-72">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input

@@ -78,7 +78,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
           <div className="p-4 border-t border-sidebar-border">
             <div className="flex items-center gap-3 px-3 py-3 rounded-lg bg-sidebar-accent">
               <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
-                <span className="text-primary font-semibold">{user?.name?.charAt(0) || 'U'}</span>
+                <span className="text-[hsl(var(--sidebar-brand-text))] font-semibold">{user?.name?.charAt(0) || 'U'}</span>
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-white truncate">{user?.name}</p>

@@ -19,6 +19,7 @@ import { expensesRoutes } from './routes/expenses.routes.js';
 import { pricingRoutes } from './routes/pricing.routes.js';
 import { itineraryRoutes } from './routes/itinerary.routes.js';
 import { reportsRoutes } from './routes/reports.routes.js';
+import { customerExtrasRoutes } from './routes/customer-extras.routes.js';
 
 export async function buildApp() {
   const app = Fastify({ logger: process.env.NODE_ENV !== 'test' });
@@ -56,6 +57,15 @@ export async function buildApp() {
     return reply.code(500).send({ message: 'Erro interno do servidor' });
   });
 
+  // Cabeçalhos de segurança em todas as respostas (spec 10.1). A API só devolve
+  // JSON e arquivos; nada dela deve abrir dentro de outro site.
+  app.addHook('onSend', async (_request, reply) => {
+    reply.header('X-Content-Type-Options', 'nosniff');
+    reply.header('X-Frame-Options', 'DENY');
+    reply.header('Referrer-Policy', 'no-referrer');
+    if (process.env.NODE_ENV === 'production') reply.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  });
+
   app.get('/health', async () => ({ status: 'ok' }));
 
   await app.register(authRoutes);
@@ -72,6 +82,7 @@ export async function buildApp() {
   await app.register(pricingRoutes);
   await app.register(itineraryRoutes);
   await app.register(reportsRoutes);
+  await app.register(customerExtrasRoutes);
 
   return app;
 }

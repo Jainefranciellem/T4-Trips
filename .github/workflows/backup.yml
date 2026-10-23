@@ -1,0 +1,38 @@
+# Backup semanal do banco (política em docs/backup.md).
+# Guarda o dump como artefato privado do repositório por 90 dias.
+# Precisa do segredo BACKUP_DATABASE_URL (conexão direta do Neon, sem pooler).
+name: Backup do banco
+
+on:
+  schedule:
+    - cron: '0 6 * * 1' # segunda-feira, 3h no horário de Brasília
+  workflow_dispatch: {}
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Instalar cliente do Postgres 16
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client-16
+
+      - name: Gerar o dump
+        env:
+          DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+        run: |
+          test -n "$DATABASE_URL" || { echo "Falta o segredo BACKUP_DATABASE_URL"; exit 1; }
+          FILE="t4trips-$(date -u +%Y-%m-%d).dump"
+          /usr/lib/postgresql/16/bin/pg_dump "$DATABASE_URL" --format=custom --no-owner --no-privileges --file "$FILE"
+          # Confere que o arquivo abre antes de guardar.
+          /usr/lib/postgresql/16/bin/pg_restore --list "$FILE" > /dev/null
+          ls -lh "$FILE"
+          echo "FILE=$FILE" >> "$GITHUB_ENV"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.FILE }}
+          path: ${{ env.FILE }}
+          retention-days: 90

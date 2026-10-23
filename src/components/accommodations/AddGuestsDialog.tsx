@@ -7,12 +7,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { matchNames } from '@/lib/name-match';
-import type { Reservation, TripRoom } from '@/types';
-import { AlertTriangle, CheckCircle2, Loader2, Search, XCircle } from 'lucide-react';
+import type { PassengerGroup, Reservation, TripRoom } from '@/types';
+import { AlertTriangle, CheckCircle2, Loader2, Search, Users, XCircle } from 'lucide-react';
 
 interface Props {
   room: TripRoom | null;
   passengers: Reservation[];
+  // Famílias/grupos da viagem (RF-012: manter grupos vinculados).
+  groups: PassengerGroup[];
   busy: boolean;
   error: string | null;
   onClose: () => void;
@@ -22,7 +24,7 @@ interface Props {
 const where = (r: Reservation) => (r.room ? `${r.room.room_identifier} (${r.room.accommodation_name})` : null);
 
 // RF-012: adicionar hóspedes buscando ou colando uma lista de nomes.
-export function AddGuestsDialog({ room, passengers, busy, error, onClose, onConfirm }: Props) {
+export function AddGuestsDialog({ room, passengers, groups, busy, error, onClose, onConfirm }: Props) {
   const [search, setSearch] = useState('');
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [pasted, setPasted] = useState('');
@@ -52,6 +54,16 @@ export function AddGuestsDialog({ room, passengers, busy, error, onClose, onConf
     .filter((id): id is string => !!id);
   const ids = tab === 'buscar' ? [...picked] : [...new Set(pastedIds)];
   const movers = ids.map((id) => passengers.find((p) => p.id === id)!).filter((p) => p?.room);
+
+  const groupOf = (id: string) => groups.find((g) => g.members.some((m) => m.reservation_id === id));
+  // Quem é do mesmo grupo de alguém marcado e ainda não foi marcado nem está aqui.
+  const suggestions = [...picked]
+    .map(groupOf)
+    .filter((g): g is PassengerGroup => !!g)
+    .flatMap((g) => g.members)
+    .filter((m, i, all) => !picked.has(m.reservation_id) && all.findIndex((x) => x.reservation_id === m.reservation_id) === i)
+    .filter((m) => candidates.some((c) => c.id === m.reservation_id));
+  const suggestedGroup = suggestions.length ? groupOf(suggestions[0].reservation_id) : null;
 
   const toggle = (id: string, on: boolean) =>
     setPicked((s) => {
@@ -91,12 +103,35 @@ export function AddGuestsDialog({ room, passengers, busy, error, onClose, onConf
                       <span>
                         <span className="font-medium">{p.passenger_name}</span>
                         <span className="text-muted-foreground"> · {where(p) ? `hoje no ${where(p)}` : 'sem quarto'}</span>
+                        {groupOf(p.id) && (
+                          <span className="ml-1 inline-flex items-center gap-0.5 text-xs text-primary">
+                            <Users className="h-3 w-3" /> {groupOf(p.id)!.name ?? 'grupo'}
+                          </span>
+                        )}
                       </span>
                     </label>
                   </li>
                 );
               })}
             </ul>
+            {suggestions.length > 0 && (
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-primary/10 border border-primary/30 px-3 py-2 text-sm" role="status">
+                <span>
+                  <Users className="inline h-4 w-4 mr-1" />
+                  {suggestedGroup?.name ? `${suggestedGroup.name}: ` : 'Mesmo grupo: '}
+                  {suggestions.map((m) => m.passenger_name).join(', ')}
+                </span>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={picked.size + suggestions.length > free}
+                  onClick={() => setPicked((s) => new Set([...s, ...suggestions.map((m) => m.reservation_id)]))}
+                >
+                  {picked.size + suggestions.length > free ? 'Não cabe todo mundo' : 'Colocar juntos'}
+                </Button>
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="colar" className="space-y-3">
