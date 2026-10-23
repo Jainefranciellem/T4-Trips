@@ -19,6 +19,7 @@ import {
   isExpiredHold,
 } from '../lib/reservation-rules.js';
 import { lockTrip } from '../lib/locks.js';
+import { dateISO } from '../lib/finance-rules.js';
 import { requireAuth, requirePermission, type AuthUser } from '../middleware/auth.js';
 import { presentCustomer } from './customers.routes.js';
 import { tripScope, tripWriteScope } from './trips.routes.js';
@@ -170,15 +171,26 @@ export async function reservationsRoutes(app: FastifyInstance) {
 
       const r = await app.prisma.reservation.findUnique({
         where: { public_token_hash: hashToken(token) },
-        include: { trip: true, seat_assignments: activeSeatInclude, room_assignments: activeRoomInclude },
+        include: {
+          trip: {
+            include: {
+              itinerary: {
+                where: { is_public: true },
+                orderBy: [{ itinerary_date: 'asc' }, { start_time: { sort: 'asc', nulls: 'first' } }, { sort_order: 'asc' }],
+              },
+            },
+          },
+          seat_assignments: activeSeatInclude,
+          room_assignments: activeRoomInclude,
+        },
       });
       if (!r || linkState(r) !== 'ATIVO') return unavailable();
       const seat = r.seat_assignments[0]?.trip_seat;
       const room = r.room_assignments[0]?.trip_room;
       if (r.trip.status === 'CANCELADA' || r.trip.status === 'ARQUIVADA') return unavailable();
 
-      // RN-013: só dados públicos; o roteiro entra numa próxima fase.
-      // Motorista, capacidades e contatos internos ficam de fora.
+      // RN-013: só dados públicos. Motorista, capacidades e contatos internos
+      // ficam de fora.
       return {
         passenger_name: r.passenger_name,
         waitlist: r.reservation_status === 'LISTA_ESPERA',
@@ -204,7 +216,17 @@ export async function reservationsRoutes(app: FastifyInstance) {
               room_name: room.accommodation_room.name,
             }
           : null,
-        itinerary: [],
+        // Só itens marcados como públicos, sem observações internas.
+        itinerary: r.trip.itinerary.map((i) => ({
+          date: dateISO(i.itinerary_date),
+          start_time: i.start_time,
+          end_time: i.end_time,
+          activity: i.activity,
+          location: i.location,
+          meeting_point: i.meeting_point,
+          included_services: i.included_services,
+          public_instructions: i.public_instructions,
+        })),
       };
     },
   );

@@ -17,6 +17,8 @@ export type Permission =
   | 'finance.write'
   | 'finance.reverse'
   | 'expenses.write'
+  | 'pricing.write'
+  | 'itinerary.write'
   | 'reports.read'
   | 'reports.financial'
   | 'audit.read'
@@ -170,7 +172,16 @@ export interface PublicReservation {
   };
   transport: { vehicle: string; identifier: string | null; seat_number: string; floor: number } | null;
   accommodation: { name: string; address: string | null; city: string | null; state: string | null; room: string; room_name: string | null } | null;
-  itinerary: unknown[];
+  itinerary: {
+    date: string;
+    start_time: string | null;
+    end_time: string | null;
+    activity: string;
+    location: string | null;
+    meeting_point: string | null;
+    included_services: string | null;
+    public_instructions: string | null;
+  }[];
 }
 
 export interface ReservationSeat {
@@ -456,4 +467,67 @@ export interface FinanceDashboard {
   reservations_by_status: { pago: number; parcial: number; pendente: number; atrasado: number };
   overdue_amount: number;
   expenses_overdue: number;
+}
+
+export interface PricingScenarioInput {
+  name: string;
+  paying_passengers: number;
+  courtesy_passengers: number;
+  vehicle_capacity: number | null;
+  fixed_costs: number;
+  variable_cost_per_person: number;
+  discounts: number;
+  installment_fee_bp: number;
+  contingency_type: 'FIXO' | 'PERCENTUAL';
+  contingency_value: number;
+  desired_margin_bp: number;
+  desired_price: number | null;
+}
+
+export interface PricingResult {
+  price: number;
+  base_costs: number;
+  contingency: number;
+  total_cost: number;
+  cost_per_paying: number;
+  minimum_price: number;
+  suggested_price: number;
+  estimated_revenue: number;
+  fees: number;
+  estimated_profit: number;
+  estimated_margin: number | null;
+  break_even_passengers: number | null;
+  warnings: string[];
+}
+
+export interface PricingScenario extends PricingScenarioInput {
+  id: string;
+  trip_id: string | null;
+  updated_at: string;
+  result: PricingResult;
+}
+
+export interface PricingDefaults {
+  paying_passengers: number;
+  courtesy_passengers: number;
+  vehicle_capacity: number | null;
+  fixed_costs: number;
+  variable_cost_per_person: number;
+  current_price: number;
+}
+
+export interface ItineraryItem {
+  id: string;
+  trip_id: string;
+  itinerary_date: string;
+  sort_order: number;
+  start_time: string | null;
+  end_time: string | null;
+  location: string | null;
+  activity: string;
+  meeting_point: string | null;
+  included_services: string | null;
+  public_instructions: string | null;
+  internal_notes: string | null;
+  is_public: boolean;
 }

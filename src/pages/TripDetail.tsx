@@ -15,6 +15,8 @@ import { AccommodationsPanel } from '@/components/accommodations/AccommodationsP
 import { PaymentsPanel } from '@/components/finance/PaymentsPanel';
 import { ExpensesPanel } from '@/components/finance/ExpensesPanel';
 import { FinanceDashboardPanel } from '@/components/finance/FinanceDashboardPanel';
+import { PricingSimulator } from '@/components/planning/PricingSimulator';
+import { ItineraryPanel } from '@/components/planning/ItineraryPanel';
 import { useAuth } from '@/contexts/AuthContext';
 import { getTrip } from '@/lib/trips.service';
 import { canEditTrip } from '@/lib/trip-rules';
@@ -178,6 +180,8 @@ const TripDetail = () => {
       {current.key === 'pagamentos' && (can('finance.read') || can('finance.write') ? <PaymentsPanel trip={trip} /> : <NoAccess />)}
       {current.key === 'despesas' && (can('finance.read') ? <ExpensesPanel trip={trip} /> : <NoAccess />)}
       {current.key === 'financeiro' && (can('finance.read') ? <FinanceDashboardPanel trip={trip} /> : <NoAccess />)}
+      {current.key === 'simulador' && (can('finance.read') ? <PricingSimulator tripId={trip.id} /> : <NoAccess />)}
+      {current.key === 'roteiro' && <ItineraryPanel trip={trip} />}
 
       {current.key === 'configuracoes' && (
         <div className="grid gap-6 lg:grid-cols-[2fr_1fr] items-start">

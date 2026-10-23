@@ -95,8 +95,8 @@ export const tripModules = [
   { key: 'pagamentos', label: 'Pagamentos', ready: true },
   { key: 'despesas', label: 'Despesas', ready: true },
   { key: 'financeiro', label: 'Dashboard financeiro', ready: true },
-  { key: 'simulador', label: 'Simulador de preços', ready: false },
-  { key: 'roteiro', label: 'Roteiro', ready: false },
+  { key: 'simulador', label: 'Simulador de preços', ready: true },
+  { key: 'roteiro', label: 'Roteiro', ready: true },
   { key: 'relatorios', label: 'Relatórios', ready: false },
   { key: 'configuracoes', label: 'Configurações da viagem', ready: true },
 ] as const;

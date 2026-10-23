@@ -4,8 +4,8 @@ import { useParams } from 'react-router-dom';
 import { Logo } from '@/components/common/Logo';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getPublicReservation } from '@/lib/reservations.service';
-import { formatDateTime } from '@/lib/format';
-import { BedDouble, Bus, CalendarDays, Info, ListChecks, MapPin } from 'lucide-react';
+import { formatDateTime, formatDay } from '@/lib/format';
+import { BedDouble, Bus, CalendarDays, Info, ListChecks, MapPin, Route } from 'lucide-react';
 
 function Section({ icon: Icon, title, children }: { icon: typeof Bus; title: string; children: ReactNode }) {
   return (
@@ -116,6 +116,36 @@ const PassengerPage = () => {
                 <p className="text-muted-foreground">Pousada e quarto serão informados aqui.</p>
               )}
             </Section>
+
+            {data.itinerary.length > 0 && (
+              <Section icon={Route} title="Roteiro">
+                <ol className="space-y-3">
+                  {[...new Set(data.itinerary.map((i) => i.date))].map((day, n) => (
+                    <li key={day} className="space-y-1.5">
+                      <p className="font-medium">
+                        Dia {n + 1} <span className="text-muted-foreground font-normal">· {formatDay(day)}</span>
+                      </p>
+                      <ul className="space-y-1.5 border-l-2 border-primary/40 pl-3">
+                        {data.itinerary
+                          .filter((i) => i.date === day)
+                          .map((i, k) => (
+                            <li key={k}>
+                              <p>
+                                {i.start_time && <strong className="tabular-nums">{i.start_time} </strong>}
+                                {i.activity}
+                              </p>
+                              {(i.location || i.meeting_point) && (
+                                <p className="text-muted-foreground">{[i.location, i.meeting_point && `encontro: ${i.meeting_point}`].filter(Boolean).join(' · ')}</p>
+                              )}
+                              {i.public_instructions && <p className="text-muted-foreground whitespace-pre-line">{i.public_instructions}</p>}
+                            </li>
+                          ))}
+                      </ul>
+                    </li>
+                  ))}
+                </ol>
+              </Section>
+            )}
 
             {data.trip.included_services && (
               <Section icon={ListChecks} title="Incluso no pacote">

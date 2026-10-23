@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Logo } from '@/components/common/Logo';
 import { roleLabel } from '@/lib/constants';
 import type { Permission } from '@/types';
-import { BedDouble, Bus, Map, Users, UserCog, LogOut, Menu, X } from 'lucide-react';
+import { BedDouble, Bus, Calculator, Map, Users, UserCog, LogOut, Menu, X } from 'lucide-react';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -18,6 +18,7 @@ const navItems: { path: string; icon: typeof Map; label: string; permission: Per
   { path: '/clientes', icon: Users, label: 'Clientes', permission: 'customers.read' },
   { path: '/veiculos', icon: Bus, label: 'Veículos', permission: 'vehicles.manage' },
   { path: '/pousadas', icon: BedDouble, label: 'Pousadas', permission: 'accommodations.manage' },
+  { path: '/simulador', icon: Calculator, label: 'Simulador', permission: 'finance.read' },
   { path: '/usuarios', icon: UserCog, label: 'Usuários', permission: 'users.manage' },
 ];
 

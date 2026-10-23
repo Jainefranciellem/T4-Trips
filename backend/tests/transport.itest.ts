@@ -50,6 +50,8 @@ beforeAll(async () => {
 
   await app.prisma.$transaction([
     app.prisma.auditLog.deleteMany(),
+    app.prisma.pricingScenario.deleteMany(),
+    app.prisma.itineraryItem.deleteMany(),
     app.prisma.expensePayment.deleteMany(),
     app.prisma.tripExpense.deleteMany(),
     app.prisma.expenseCategory.deleteMany({ where: { is_system: false } }),

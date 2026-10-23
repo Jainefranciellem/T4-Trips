@@ -16,6 +16,8 @@ import { accommodationsRoutes } from './routes/accommodations.routes.js';
 import { filesRoutes } from './routes/files.routes.js';
 import { financeRoutes } from './routes/finance.routes.js';
 import { expensesRoutes } from './routes/expenses.routes.js';
+import { pricingRoutes } from './routes/pricing.routes.js';
+import { itineraryRoutes } from './routes/itinerary.routes.js';
 
 export async function buildApp() {
   const app = Fastify({ logger: process.env.NODE_ENV !== 'test' });
@@ -64,6 +66,8 @@ export async function buildApp() {
   await app.register(filesRoutes);
   await app.register(financeRoutes);
   await app.register(expensesRoutes);
+  await app.register(pricingRoutes);
+  await app.register(itineraryRoutes);
 
   return app;
 }

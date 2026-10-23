@@ -114,6 +114,11 @@ enum CostType {
   POR_PESSOA
 }
 
+enum ContingencyType {
+  FIXO
+  PERCENTUAL
+}
+
 enum TripAccessLevel {
   VISUALIZAR
   OPERAR
@@ -239,6 +244,8 @@ model Trip {
   vehicles       TripVehicle[]
   accommodations TripAccommodation[]
   expenses       TripExpense[]
+  scenarios      PricingScenario[]
+  itinerary      ItineraryItem[]
 
   @@index([destination])
   @@index([departure_at])
@@ -637,6 +644,63 @@ model ExpensePayment {
 
   @@index([expense_id])
   @@map("expense_payments")
+}
+
+// Simulador de preços (spec 6.27). trip_id nulo = cenário independente.
+// Percentuais em pontos-base (1500 = 15%); dinheiro em centavos. As saídas
+// são recalculadas a cada gravação (pricing-rules.ts).
+model PricingScenario {
+  id                       String          @id @default(uuid())
+  trip_id                  String?
+  name                     String
+  paying_passengers        Int
+  courtesy_passengers      Int             @default(0)
+  vehicle_capacity         Int?
+  fixed_costs              Int             @default(0)
+  variable_cost_per_person Int             @default(0)
+  discounts                Int             @default(0)
+  installment_fee_bp       Int             @default(0)
+  contingency_type         ContingencyType @default(PERCENTUAL)
+  contingency_value        Int             @default(0)
+  desired_margin_bp        Int             @default(0)
+  desired_price            Int?
+  suggested_price          Int
+  minimum_price            Int
+  estimated_revenue        Int
+  estimated_profit         Int
+  break_even_passengers    Int?
+  created_by               String
+  created_at               DateTime        @default(now())
+  updated_at               DateTime        @updatedAt
+
+  trip Trip? @relation(fields: [trip_id], references: [id])
+
+  @@index([trip_id])
+  @@map("pricing_scenarios")
+}
+
+// Roteiro por dia (spec 6.28). Horários como "HH:MM" no fuso da viagem.
+model ItineraryItem {
+  id                  String   @id @default(uuid())
+  trip_id             String
+  itinerary_date      DateTime @db.Date
+  sort_order          Int      @default(0)
+  start_time          String?
+  end_time            String?
+  location            String?
+  activity            String
+  meeting_point       String?
+  included_services   String?
+  public_instructions String?
+  internal_notes      String?
+  is_public           Boolean  @default(true)
+  created_at          DateTime @default(now())
+  updated_at          DateTime @updatedAt
+
+  trip Trip @relation(fields: [trip_id], references: [id])
+
+  @@index([trip_id, itinerary_date])
+  @@map("itinerary_items")
 }
 
 model AuditLog {
