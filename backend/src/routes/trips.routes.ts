@@ -31,14 +31,27 @@ export function tripWriteScope(user: AuthUser): Prisma.TripWhereInput {
 }
 
 // Só o necessário pra calcular vagas e receita prevista no resumo.
-export const summaryFields = { reservation_status: true, hold_expires_at: true, final_price: true } as const;
+export const summaryFields = {
+  reservation_status: true,
+  hold_expires_at: true,
+  final_price: true,
+  payments: { where: { status: 'VALIDO' }, select: { amount: true, kind: true } },
+} satisfies Prisma.ReservationSelect;
 
-function presentTrip(trip: Trip, user: AuthUser, reservations: ReservationLike[]) {
+type SummaryRow = Prisma.ReservationGetPayload<{ select: typeof summaryFields }>;
+
+const withPaid = (rows: SummaryRow[]): ReservationLike[] =>
+  rows.map(({ payments, ...r }) => ({
+    ...r,
+    paid: payments.reduce((n, p) => n + (p.kind === 'REEMBOLSO' ? -p.amount : p.amount), 0),
+  }));
+
+function presentTrip(trip: Trip, user: AuthUser, reservations: SummaryRow[]) {
   const includeFinance = hasPermission(user, 'finance.read');
   return {
     ...trip,
     group: tripGroup(trip.status),
-    summary: computeTripSummary(trip, reservations, includeFinance),
+    summary: computeTripSummary(trip, withPaid(reservations), includeFinance),
     // Observações internas não vão pra quem só visualiza.
     ...(user.role === 'VISUALIZADOR' ? { internal_notes: null } : {}),
   };

@@ -15,6 +15,8 @@ export type Permission =
   | 'rooms.assign'
   | 'finance.read'
   | 'finance.write'
+  | 'finance.reverse'
+  | 'expenses.write'
   | 'reports.read'
   | 'reports.financial'
   | 'audit.read'
@@ -330,4 +332,128 @@ export interface TripAccommodation {
   accommodation: Omit<Accommodation, 'rooms' | 'total_capacity'>;
   rooms: TripRoom[];
   counts: { rooms: number; capacity: number; guests: number };
+}
+
+export type PaymentMethod = 'PIX' | 'DINHEIRO' | 'CARTAO' | 'TRANSFERENCIA' | 'OUTRO';
+export type EntryStatus = 'VALIDO' | 'ESTORNADO';
+export type FinancialStatus = 'PENDENTE' | 'PARCIALMENTE_PAGO' | 'PAGO' | 'ATRASADO' | 'CANCELADO' | 'REEMBOLSADO';
+export type InstallmentStatus = 'PENDENTE' | 'PARCIAL' | 'PAGA' | 'VENCIDA';
+export type ExpenseStatus = 'PREVISTA' | 'PARCIALMENTE_PAGA' | 'QUITADA' | 'VENCIDA' | 'CANCELADA';
+export type CostType = 'FIXO' | 'POR_PESSOA';
+
+export interface FileRef {
+  id: string;
+  original_name: string;
+  mime_type: string;
+}
+
+export interface CustomerPayment {
+  id: string;
+  kind: 'PAGAMENTO' | 'REEMBOLSO';
+  amount: number;
+  payment_date: string;
+  payment_method: PaymentMethod;
+  reference: string | null;
+  receipt: FileRef | null;
+  status: EntryStatus;
+  created_at: string;
+  reversed_at: string | null;
+  reversal_reason: string | null;
+}
+
+export interface Installment {
+  id: string;
+  installment_number: number;
+  due_date: string;
+  amount: number;
+  paid_amount: number;
+  status: InstallmentStatus;
+}
+
+export interface ReservationFinance {
+  reservation_id: string;
+  passenger_name: string;
+  reservation_status: ReservationStatus;
+  final_price: number;
+  is_courtesy: boolean;
+  payment_due_date: string | null;
+  paid: number;
+  refunded: number;
+  balance: number;
+  status: FinancialStatus;
+  installments: Installment[];
+  plan_mismatch: boolean;
+  next_due_date: string | null;
+  overdue_amount: number;
+  payments: CustomerPayment[];
+}
+
+export type Receivable = Omit<ReservationFinance, 'payments' | 'installments'> & { installments_count: number; payments_count: number };
+
+export interface LedgerEntry extends CustomerPayment {
+  reservation_id: string;
+  passenger_name: string;
+  created_by_name: string | null;
+}
+
+export interface ExpenseCategory {
+  id: string;
+  name: string;
+  is_system: boolean;
+  status: 'ATIVO' | 'INATIVO';
+}
+
+export interface ExpensePayment {
+  id: string;
+  amount: number;
+  payment_date: string;
+  payment_method: PaymentMethod;
+  reference: string | null;
+  receipt: FileRef | null;
+  status: EntryStatus;
+  reversal_reason: string | null;
+}
+
+export interface TripExpense {
+  id: string;
+  trip_id: string;
+  category: { id: string; name: string };
+  description: string;
+  supplier_name: string | null;
+  cost_type: CostType;
+  planned_amount: number;
+  due_date: string | null;
+  notes: string | null;
+  receipt: FileRef | null;
+  cancelled_at: string | null;
+  cancel_reason: string | null;
+  paid: number;
+  balance: number;
+  status: ExpenseStatus;
+  payments: ExpensePayment[];
+}
+
+export interface FinanceDashboard {
+  revenue_expected: number;
+  revenue_received: number;
+  revenue_pending: number;
+  expenses_expected: number;
+  expenses_paid: number;
+  expenses_pending: number;
+  profit_expected: number;
+  result_realized: number;
+  margin_expected: number | null;
+  margin_realized: number | null;
+  paying_passengers: number;
+  courtesy_passengers: number;
+  average_ticket: number | null;
+  fixed_costs: number;
+  variable_per_passenger: number;
+  break_even_passengers: number | null;
+  retained_from_cancellations: number;
+  commercial_capacity: number;
+  by_category: { category: string; planned: number; paid: number }[];
+  reservations_by_status: { pago: number; parcial: number; pendente: number; atrasado: number };
+  overdue_amount: number;
+  expenses_overdue: number;
 }

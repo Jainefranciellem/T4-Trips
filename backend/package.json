@@ -15,7 +15,10 @@
     "test:integration": "TEST_DATABASE_URL=\"${TEST_DATABASE_URL:-postgresql://t4trips:t4trips@localhost:5433/t4trips_test?schema=public}\" sh -c 'DATABASE_URL=\"$TEST_DATABASE_URL\" DIRECT_URL=\"$TEST_DATABASE_URL\" prisma migrate deploy && vitest run --config vitest.integration.config.ts'"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1156.0",
+    "@aws-sdk/s3-request-presigner": "^3.1156.0",
     "@fastify/cors": "^10.0.1",
+    "@fastify/multipart": "^9.4.0",
     "@fastify/rate-limit": "^10.1.1",
     "@prisma/client": "^5.20.0",
     "bcrypt": "^5.1.1",

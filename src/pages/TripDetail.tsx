@@ -12,6 +12,9 @@ import { TripAccessCard } from '@/components/trips/TripAccessCard';
 import { ReservationsPanel } from '@/components/reservations/ReservationsPanel';
 import { TransportPanel } from '@/components/transport/TransportPanel';
 import { AccommodationsPanel } from '@/components/accommodations/AccommodationsPanel';
+import { PaymentsPanel } from '@/components/finance/PaymentsPanel';
+import { ExpensesPanel } from '@/components/finance/ExpensesPanel';
+import { FinanceDashboardPanel } from '@/components/finance/FinanceDashboardPanel';
 import { useAuth } from '@/contexts/AuthContext';
 import { getTrip } from '@/lib/trips.service';
 import { canEditTrip } from '@/lib/trip-rules';
@@ -31,6 +34,14 @@ function Stat({ label, value, tone }: { label: string; value: ReactNode; tone?: 
         </p>
       </CardContent>
     </Card>
+  );
+}
+
+function NoAccess() {
+  return (
+    <div className="text-center py-16 border border-dashed rounded-xl text-sm text-muted-foreground">
+      Seu perfil não tem acesso aos dados financeiros desta viagem.
+    </div>
   );
 }
 
@@ -164,6 +175,9 @@ const TripDetail = () => {
       )}
       {current.key === 'transporte' && <TransportPanel trip={trip} />}
       {current.key === 'pousadas' && <AccommodationsPanel trip={trip} />}
+      {current.key === 'pagamentos' && (can('finance.read') || can('finance.write') ? <PaymentsPanel trip={trip} /> : <NoAccess />)}
+      {current.key === 'despesas' && (can('finance.read') ? <ExpensesPanel trip={trip} /> : <NoAccess />)}
+      {current.key === 'financeiro' && (can('finance.read') ? <FinanceDashboardPanel trip={trip} /> : <NoAccess />)}
 
       {current.key === 'configuracoes' && (
         <div className="grid gap-6 lg:grid-cols-[2fr_1fr] items-start">

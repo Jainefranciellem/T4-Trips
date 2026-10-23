@@ -19,7 +19,8 @@ import { listReservations, regeneratePublicLink, revokePublicLink } from '@/lib/
 import { formatBRL, formatDateShort, formatPhone } from '@/lib/format';
 import { reservationStatusLabel, reservationStatusVariant } from '@/lib/constants';
 import type { Reservation, ReservationStatus, Trip } from '@/types';
-import { Ban, Link2, Link2Off, MoreVertical, Pencil, Plus, Search } from 'lucide-react';
+import { Ban, Link2, Link2Off, MoreVertical, Pencil, Plus, Search, Wallet } from 'lucide-react';
+import { ReservationFinanceDialog } from '@/components/finance/ReservationFinanceDialog';
 import { ReservationFormDialog } from './ReservationFormDialog';
 import { PublicLinkDialog } from './PublicLinkDialog';
 import { CancelReservationDialog } from './CancelReservationDialog';
@@ -47,6 +48,7 @@ export function ReservationsPanel({ trip, mode }: { trip: Trip; mode: 'passageir
   const [editing, setEditing] = useState<Reservation | null>(null);
   const [cancelling, setCancelling] = useState<Reservation | null>(null);
   const [link, setLink] = useState<{ reservation: Reservation; url: string } | null>(null);
+  const [financeFor, setFinanceFor] = useState<string | null>(null);
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['reservations', trip.id],
@@ -100,6 +102,11 @@ export function ReservationsPanel({ trip, mode }: { trip: Trip; mode: 'passageir
           >
             <Pencil className="h-4 w-4" /> Editar reserva
           </DropdownMenuItem>
+          {(can('finance.write') || can('finance.read')) && (
+            <DropdownMenuItem onClick={() => setFinanceFor(r.id)}>
+              <Wallet className="h-4 w-4" /> Pagamentos
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem onClick={() => regenerate.mutate(r.id)}>
             <Link2 className="h-4 w-4" /> {r.public_link === 'ATIVO' ? 'Gerar novo link' : 'Gerar link'}
           </DropdownMenuItem>
@@ -261,6 +268,7 @@ export function ReservationsPanel({ trip, mode }: { trip: Trip; mode: 'passageir
       />
       <CancelReservationDialog reservation={cancelling} onOpenChange={(o) => !o && setCancelling(null)} />
       <PublicLinkDialog link={link} trip={trip} onOpenChange={(o) => !o && setLink(null)} />
+      <ReservationFinanceDialog reservationId={financeFor} tripId={trip.id} onClose={() => setFinanceFor(null)} />
     </div>
   );
 }

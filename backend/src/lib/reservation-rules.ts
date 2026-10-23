@@ -35,6 +35,8 @@ export interface ReservationLike {
   reservation_status: ReservationStatus;
   hold_expires_at: Date | null;
   final_price: number;
+  // Pago líquido (pagamentos válidos menos reembolsos).
+  paid?: number;
 }
 
 // Pré-reserva vencida conta como liberada quando a viagem libera sozinha.
@@ -104,15 +106,15 @@ export interface TripSummary {
   revenue_pending: number | null;
 }
 
-// RF-014 e RN-010. Pagamentos entram na fase do financeiro; até lá o
-// recebido é zero e tudo o que foi contratado está a receber.
+// RF-014 e RN-010 (versão resumida pros cartões; o dashboard financeiro
+// completo está em finance-rules.ts).
 export function computeTripSummary(
   trip: { commercial_capacity: number } & VacancyConfig,
   reservations: ReservationLike[],
   includeFinance: boolean,
   now = new Date(),
 ): TripSummary {
-  let confirmed = 0, pending = 0, cancelled = 0, waitlist = 0, expired = 0, occupied = 0, expected = 0;
+  let confirmed = 0, pending = 0, cancelled = 0, waitlist = 0, expired = 0, occupied = 0, expected = 0, received = 0;
   for (const r of reservations) {
     const s = r.reservation_status;
     if (isEnded(s)) cancelled++;
@@ -121,9 +123,11 @@ export function computeTripSummary(
     else if (isExpiredHold(r, now)) expired++;
     else pending++;
     if (occupiesVacancy(r, trip, now)) occupied++;
-    if (!isEnded(s) && s !== 'LISTA_ESPERA') expected += r.final_price;
+    if (!isEnded(s) && s !== 'LISTA_ESPERA') {
+      expected += r.final_price;
+      received += r.paid ?? 0;
+    }
   }
-  const received = 0;
   return {
     passengers: confirmed + pending + expired,
     confirmed,

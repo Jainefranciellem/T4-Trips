@@ -88,6 +88,32 @@ enum RoomType {
   PERSONALIZADO
 }
 
+enum PaymentMethod {
+  PIX
+  DINHEIRO
+  CARTAO
+  TRANSFERENCIA
+  OUTRO
+}
+
+// Só VALIDO/ESTORNADO ficam gravados; situação de parcela, reserva e despesa
+// (pendente, parcial, pago, vencido) é calculada dos lançamentos válidos.
+enum EntryStatus {
+  VALIDO
+  ESTORNADO
+}
+
+enum CustomerPaymentKind {
+  PAGAMENTO
+  REEMBOLSO
+}
+
+// Despesa fixa da viagem ou por passageiro (usado no ponto de equilíbrio).
+enum CostType {
+  FIXO
+  POR_PESSOA
+}
+
 enum TripAccessLevel {
   VISUALIZAR
   OPERAR
@@ -212,6 +238,7 @@ model Trip {
   reservations Reservation[]
   vehicles       TripVehicle[]
   accommodations TripAccommodation[]
+  expenses       TripExpense[]
 
   @@index([destination])
   @@index([departure_at])
@@ -269,6 +296,8 @@ model Reservation {
   creator          User             @relation(fields: [created_by], references: [id])
   seat_assignments SeatAssignment[]
   room_assignments RoomAssignment[]
+  payment_plan     PaymentPlan?
+  payments         CustomerPayment[]
 
   @@index([trip_id])
   @@index([customer_id])
@@ -475,6 +504,139 @@ model RoomAssignment {
   @@index([reservation_id])
   @@index([trip_room_id])
   @@map("room_assignments")
+}
+
+// Arquivo enviado (comprovantes). spec 6.29: privado, com checksum.
+model StoredFile {
+  id            String    @id @default(uuid())
+  storage_key   String    @unique
+  original_name String
+  mime_type     String
+  size          Int
+  checksum      String
+  uploaded_by   String
+  created_at    DateTime  @default(now())
+  deleted_at    DateTime?
+
+  customer_payments CustomerPayment[]
+  expense_payments  ExpensePayment[]
+  expenses          TripExpense[]
+
+  @@map("files")
+}
+
+// spec 6.21/6.22. O valor pago de cada parcela é calculado distribuindo os
+// pagamentos válidos em ordem de vencimento.
+model PaymentPlan {
+  id             String   @id @default(uuid())
+  reservation_id String   @unique
+  total_amount   Int
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+
+  reservation  Reservation          @relation(fields: [reservation_id], references: [id])
+  installments PaymentInstallment[]
+
+  @@map("payment_plans")
+}
+
+model PaymentInstallment {
+  id                 String   @id @default(uuid())
+  payment_plan_id    String
+  installment_number Int
+  due_date           DateTime @db.Date
+  amount             Int
+
+  plan PaymentPlan @relation(fields: [payment_plan_id], references: [id], onDelete: Cascade)
+
+  @@unique([payment_plan_id, installment_number])
+  @@map("payment_installments")
+}
+
+// spec 6.23. Nunca apagado (RN-008): estorno muda o status e guarda o motivo.
+model CustomerPayment {
+  id              String              @id @default(uuid())
+  reservation_id  String
+  kind            CustomerPaymentKind @default(PAGAMENTO)
+  amount          Int
+  payment_date    DateTime            @db.Date
+  payment_method  PaymentMethod
+  reference       String?
+  receipt_file_id String?
+  status          EntryStatus         @default(VALIDO)
+  created_by      String
+  created_at      DateTime            @default(now())
+  reversed_at     DateTime?
+  reversed_by     String?
+  reversal_reason String?
+
+  reservation Reservation @relation(fields: [reservation_id], references: [id])
+  receipt     StoredFile? @relation(fields: [receipt_file_id], references: [id])
+
+  @@index([reservation_id])
+  @@map("customer_payments")
+}
+
+model ExpenseCategory {
+  id          String       @id @default(uuid())
+  name        String       @unique
+  description String?
+  is_system   Boolean      @default(false)
+  status      RecordStatus @default(ATIVO)
+  created_at  DateTime     @default(now())
+  updated_at  DateTime     @updatedAt
+
+  expenses TripExpense[]
+
+  @@map("expense_categories")
+}
+
+model TripExpense {
+  id              String    @id @default(uuid())
+  trip_id         String
+  category_id     String
+  description     String
+  supplier_name   String?
+  cost_type       CostType  @default(FIXO)
+  planned_amount  Int
+  due_date        DateTime? @db.Date
+  notes           String?
+  receipt_file_id String?
+  created_by      String
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
+  cancelled_at    DateTime?
+  cancel_reason   String?
+
+  trip     Trip             @relation(fields: [trip_id], references: [id])
+  category ExpenseCategory  @relation(fields: [category_id], references: [id])
+  receipt  StoredFile?      @relation(fields: [receipt_file_id], references: [id])
+  payments ExpensePayment[]
+
+  @@index([trip_id])
+  @@map("trip_expenses")
+}
+
+model ExpensePayment {
+  id              String        @id @default(uuid())
+  expense_id      String
+  amount          Int
+  payment_date    DateTime      @db.Date
+  payment_method  PaymentMethod
+  reference       String?
+  receipt_file_id String?
+  status          EntryStatus   @default(VALIDO)
+  created_by      String
+  created_at      DateTime      @default(now())
+  reversed_at     DateTime?
+  reversed_by     String?
+  reversal_reason String?
+
+  expense TripExpense @relation(fields: [expense_id], references: [id])
+  receipt StoredFile? @relation(fields: [receipt_file_id], references: [id])
+
+  @@index([expense_id])
+  @@map("expense_payments")
 }
 
 model AuditLog {

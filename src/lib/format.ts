@@ -49,3 +49,18 @@ export function formatPhone(value: string | null): string {
   if (d.length === 10) return d.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
   return value;
 }
+
+// Dia de hoje no fuso de São Paulo, no formato do <input type="date">.
+export function todayISO(): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date());
+}
+
+// "2027-03-10" (só data) → 10/03/2027, sem o deslocamento de fuso do new Date().
+export function formatDay(iso: string): string {
+  const [y, m, d] = iso.slice(0, 10).split('-');
+  return `${d}/${m}/${y}`;
+}
+
+export function formatPercent(ratio: number | null): string {
+  return ratio === null ? '—' : `${(ratio * 100).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`;
+}

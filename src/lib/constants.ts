@@ -1,4 +1,4 @@
-import type { ManualReservationStatus, ReservationStatus, Role, RoomOccupancy, RoomType, SeatType, TripGroup, TripStatus, VehicleCategory } from '@/types';
+import type { CostType, ExpenseStatus, FinancialStatus, InstallmentStatus, PaymentMethod, ManualReservationStatus, ReservationStatus, Role, RoomOccupancy, RoomType, SeatType, TripGroup, TripStatus, VehicleCategory } from '@/types';
 
 export const tripStatusLabel: Record<TripStatus, string> = {
   PLANEJADA: 'Planejada',
@@ -92,9 +92,9 @@ export const tripModules = [
   { key: 'transporte', label: 'Transporte e assentos', ready: true },
   { key: 'pousadas', label: 'Pousadas e quartos', ready: true },
   { key: 'reservas', label: 'Reservas', ready: true },
-  { key: 'pagamentos', label: 'Pagamentos', ready: false },
-  { key: 'despesas', label: 'Despesas', ready: false },
-  { key: 'financeiro', label: 'Dashboard financeiro', ready: false },
+  { key: 'pagamentos', label: 'Pagamentos', ready: true },
+  { key: 'despesas', label: 'Despesas', ready: true },
+  { key: 'financeiro', label: 'Dashboard financeiro', ready: true },
   { key: 'simulador', label: 'Simulador de preços', ready: false },
   { key: 'roteiro', label: 'Roteiro', ready: false },
   { key: 'relatorios', label: 'Relatórios', ready: false },
@@ -151,4 +151,67 @@ export const roomOccupancyLabel: Record<RoomOccupancy, string> = {
   VAZIO: 'Vazio',
   PARCIAL: 'Com vaga',
   COMPLETO: 'Completo',
+};
+
+export const paymentMethodLabel: Record<PaymentMethod, string> = {
+  PIX: 'Pix',
+  DINHEIRO: 'Dinheiro',
+  CARTAO: 'Cartão',
+  TRANSFERENCIA: 'Transferência',
+  OUTRO: 'Outro',
+};
+
+type Variant = 'info' | 'success' | 'warning' | 'attended' | 'cancelled' | 'missed';
+
+export const financialStatusLabel: Record<FinancialStatus, string> = {
+  PENDENTE: 'Pendente',
+  PARCIALMENTE_PAGO: 'Parcialmente pago',
+  PAGO: 'Pago',
+  ATRASADO: 'Atrasado',
+  CANCELADO: 'Cancelado',
+  REEMBOLSADO: 'Reembolsado',
+};
+
+export const financialStatusVariant: Record<FinancialStatus, Variant> = {
+  PENDENTE: 'info',
+  PARCIALMENTE_PAGO: 'warning',
+  PAGO: 'success',
+  ATRASADO: 'missed',
+  CANCELADO: 'cancelled',
+  REEMBOLSADO: 'cancelled',
+};
+
+export const installmentStatusLabel: Record<InstallmentStatus, string> = {
+  PENDENTE: 'A vencer',
+  PARCIAL: 'Parcial',
+  PAGA: 'Paga',
+  VENCIDA: 'Vencida',
+};
+
+export const installmentStatusVariant: Record<InstallmentStatus, Variant> = {
+  PENDENTE: 'info',
+  PARCIAL: 'warning',
+  PAGA: 'success',
+  VENCIDA: 'missed',
+};
+
+export const expenseStatusLabel: Record<ExpenseStatus, string> = {
+  PREVISTA: 'Prevista',
+  PARCIALMENTE_PAGA: 'Parcialmente paga',
+  QUITADA: 'Quitada',
+  VENCIDA: 'Vencida',
+  CANCELADA: 'Cancelada',
+};
+
+export const expenseStatusVariant: Record<ExpenseStatus, Variant> = {
+  PREVISTA: 'info',
+  PARCIALMENTE_PAGA: 'warning',
+  QUITADA: 'success',
+  VENCIDA: 'missed',
+  CANCELADA: 'cancelled',
+};
+
+export const costTypeLabel: Record<CostType, string> = {
+  FIXO: 'Custo fixo da viagem',
+  POR_PESSOA: 'Custo por passageiro',
 };

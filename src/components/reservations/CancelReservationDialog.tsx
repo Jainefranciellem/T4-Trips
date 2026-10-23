@@ -42,7 +42,7 @@ export function CancelReservationDialog({ reservation, onOpenChange }: { reserva
         <AlertDialogHeader>
           <AlertDialogTitle>Cancelar a reserva de {reservation?.passenger_name}?</AlertDialogTitle>
           <AlertDialogDescription>
-            A vaga é liberada e o link do passageiro para de funcionar. Os pagamentos continuam no histórico; reembolso é lançado à parte.
+            A vaga é liberada e o link do passageiro para de funcionar. Os pagamentos continuam no histórico; o reembolso, se houver, é lançado depois em Pagamentos.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <div className="space-y-1.5">
