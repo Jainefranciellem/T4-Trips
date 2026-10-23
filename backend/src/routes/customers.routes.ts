@@ -194,8 +194,8 @@ export async function customersRoutes(app: FastifyInstance) {
     async (request, reply) => setArchived(app, request, reply, false),
   );
 
-  // Histórico de alterações do cadastro (auditoria). Viagens/reservas/pagamentos
-  // entram aqui quando esses módulos existirem.
+  // Histórico do cliente: alterações do cadastro e reservas em viagens.
+  // Pagamentos entram com o módulo financeiro.
   app.get<{ Params: { id: string } }>(
     '/customers/:id/history',
     { preHandler: requirePermission('audit.read') },
@@ -206,7 +206,18 @@ export async function customersRoutes(app: FastifyInstance) {
         include: { user: { select: { name: true } } },
         take: 100,
       });
-      return { audit: logs, trips: [], reservations: [], payments: [] };
+      const reservations = await app.prisma.reservation.findMany({
+        where: { customer_id: request.params.id },
+        orderBy: { created_at: 'desc' },
+        select: {
+          id: true,
+          reservation_status: true,
+          created_at: true,
+          cancelled_at: true,
+          trip: { select: { id: true, name: true, destination: true, departure_at: true } },
+        },
+      });
+      return { audit: logs, reservations, payments: [] };
     },
   );
 }

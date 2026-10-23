@@ -32,6 +32,7 @@ const baseTrip = z.object({
   cover_image_url: optionalText,
   waitlist_enabled: z.boolean().default(false),
   pending_holds_seat: z.boolean().default(true),
+  auto_release_holds: z.boolean().default(true),
   reservation_ttl_hours: z.number().int().positive().nullable().optional(),
 });
 

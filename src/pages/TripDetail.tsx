@@ -9,6 +9,7 @@ import { TripActions } from '@/components/trips/TripActions';
 import { TripFormDialog } from '@/components/trips/TripFormDialog';
 import { CancelTripDialog } from '@/components/trips/CancelTripDialog';
 import { TripAccessCard } from '@/components/trips/TripAccessCard';
+import { ReservationsPanel } from '@/components/reservations/ReservationsPanel';
 import { useAuth } from '@/contexts/AuthContext';
 import { getTrip } from '@/lib/trips.service';
 import { canEditTrip } from '@/lib/trip-rules';
@@ -50,8 +51,13 @@ function Summary({ trip }: { trip: Trip }) {
         <Stat label="Passageiros" value={s.passengers} />
         <Stat label="Vagas livres" value={s.available_seats} />
         <Stat label="Lista de espera" value={s.waitlist} />
+        <Stat label="Confirmadas" value={s.confirmed} />
+        <Stat label="Pendentes" value={s.pending} />
+        <Stat label="Pré-reservas vencidas" value={s.expired_holds} tone={s.expired_holds ? 'warning' : undefined} />
+        <Stat label="Canceladas" value={s.cancelled} />
         {s.revenue_received !== null && (
           <>
+            <Stat label="Receita prevista" value={formatBRL(s.revenue_expected ?? 0)} />
             <Stat label="Receita recebida" value={formatBRL(s.revenue_received)} tone="success" />
             <Stat label="A receber" value={formatBRL(s.revenue_pending ?? 0)} tone="warning" />
           </>
@@ -78,6 +84,7 @@ function Details({ trip }: { trip: Trip }) {
           <Field label="Reserva pendente ocupa vaga" value={trip.pending_holds_seat ? 'Sim' : 'Não'} />
           <Field label="Lista de espera" value={trip.waitlist_enabled ? 'Ativa' : 'Desativada'} />
           <Field label="Validade da pré-reserva" value={trip.reservation_ttl_hours && `${trip.reservation_ttl_hours} horas`} />
+          <Field label="Pré-reserva vencida" value={trip.auto_release_holds ? 'Libera a vaga sozinha' : 'Só libera ao cancelar'} />
           <Field label="Descrição" value={trip.description} />
           <Field label="Serviços inclusos" value={trip.included_services} />
           <Field label="Serviços opcionais" value={trip.optional_services} />
@@ -150,6 +157,9 @@ const TripDetail = () => {
       </nav>
 
       {current.key === 'resumo' && <Summary trip={trip} />}
+      {(current.key === 'passageiros' || current.key === 'reservas') && (
+        <ReservationsPanel key={current.key} trip={trip} mode={current.key} />
+      )}
 
       {current.key === 'configuracoes' && (
         <div className="grid gap-6 lg:grid-cols-[2fr_1fr] items-start">

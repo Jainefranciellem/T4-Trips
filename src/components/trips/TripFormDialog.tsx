@@ -38,6 +38,7 @@ const emptyForm = {
   cancellation_policy: '',
   waitlist_enabled: false,
   pending_holds_seat: true,
+  auto_release_holds: true,
   reservation_ttl_hours: '',
 };
 
@@ -61,6 +62,7 @@ function fromTrip(trip: Trip): FormState {
     cancellation_policy: trip.cancellation_policy ?? '',
     waitlist_enabled: trip.waitlist_enabled,
     pending_holds_seat: trip.pending_holds_seat,
+    auto_release_holds: trip.auto_release_holds,
     reservation_ttl_hours: trip.reservation_ttl_hours ? String(trip.reservation_ttl_hours) : '',
   };
 }
@@ -186,6 +188,10 @@ export function TripFormDialog({ open, onOpenChange, trip, onSaved }: Props) {
             <label className="flex items-center justify-between gap-4 text-sm">
               Reserva pendente ocupa vaga
               <Switch checked={form.pending_holds_seat} onCheckedChange={(v) => set('pending_holds_seat', v)} />
+            </label>
+            <label className="flex items-center justify-between gap-4 text-sm">
+              Liberar a vaga sozinho quando a pré-reserva vencer
+              <Switch checked={form.auto_release_holds} onCheckedChange={(v) => set('auto_release_holds', v)} />
             </label>
             <label className="flex items-center justify-between gap-4 text-sm">
               Lista de espera quando lotar

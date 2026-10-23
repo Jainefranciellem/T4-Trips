@@ -13,24 +13,32 @@ import {
   canArchiveTrip,
   canCancelTrip,
   canEditTrip,
-  emptyTripSummary,
   tripGroup,
 } from '../lib/trip-rules.js';
+import { computeTripSummary, isConfirmed, type ReservationLike } from '../lib/reservation-rules.js';
 import { requireAuth, requirePermission, type AuthUser } from '../middleware/auth.js';
 
 type IdParams = { Params: { id: string } };
 
 // ADMIN enxerga todas as viagens; os demais só as que foram autorizados.
-function tripScope(user: AuthUser): Prisma.TripWhereInput {
+export function tripScope(user: AuthUser): Prisma.TripWhereInput {
   return user.role === 'ADMIN' ? {} : { users: { some: { user_id: user.id } } };
 }
 
-function presentTrip(trip: Trip, user: AuthUser) {
+// Pra alterar dados da viagem (reservas etc.) o acesso precisa ser "Operar".
+export function tripWriteScope(user: AuthUser): Prisma.TripWhereInput {
+  return user.role === 'ADMIN' ? {} : { users: { some: { user_id: user.id, access_level: 'OPERAR' } } };
+}
+
+// Só o necessário pra calcular vagas e receita prevista no resumo.
+export const summaryFields = { reservation_status: true, hold_expires_at: true, final_price: true } as const;
+
+function presentTrip(trip: Trip, user: AuthUser, reservations: ReservationLike[]) {
   const includeFinance = hasPermission(user, 'finance.read');
   return {
     ...trip,
     group: tripGroup(trip.status),
-    summary: emptyTripSummary(trip.commercial_capacity, includeFinance),
+    summary: computeTripSummary(trip, reservations, includeFinance),
     // Observações internas não vão pra quem só visualiza.
     ...(user.role === 'VISUALIZADOR' ? { internal_notes: null } : {}),
   };
@@ -41,6 +49,9 @@ export async function tripsRoutes(app: FastifyInstance) {
 
   // Viagem fora do escopo do usuário responde 404 (não 403) pra não revelar
   // que o ID existe — spec 10.1, proteção contra enumeração.
+  const reservationsOf = (tripId: string) =>
+    app.prisma.reservation.findMany({ where: { trip_id: tripId }, select: summaryFields });
+
   async function findTrip(request: FastifyRequest<IdParams>, reply: FastifyReply) {
     const trip = await app.prisma.trip.findFirst({
       where: { id: request.params.id, ...tripScope(request.user!) },
@@ -69,8 +80,12 @@ export async function tripsRoutes(app: FastifyInstance) {
       };
     }
 
-    const trips = await app.prisma.trip.findMany({ where, orderBy: { departure_at: 'asc' } });
-    return trips.map((t) => presentTrip(t, request.user!));
+    const trips = await app.prisma.trip.findMany({
+      where,
+      orderBy: { departure_at: 'asc' },
+      include: { reservations: { select: summaryFields } },
+    });
+    return trips.map(({ reservations, ...t }) => presentTrip(t, request.user!, reservations));
   });
 
   app.post('/trips', { preHandler: requirePermission('trips.write') }, async (request, reply) => {
@@ -84,13 +99,13 @@ export async function tripsRoutes(app: FastifyInstance) {
       action: 'CREATE',
       new_values: { name: trip.name, destination: trip.destination },
     });
-    return reply.code(201).send(presentTrip(trip, request.user!));
+    return reply.code(201).send(presentTrip(trip, request.user!, []));
   });
 
   app.get<IdParams>('/trips/:id', { preHandler: requirePermission('trips.read') }, async (request, reply) => {
     const trip = await findTrip(request, reply);
     if (!trip) return;
-    return presentTrip(trip, request.user!);
+    return presentTrip(trip, request.user!, await reservationsOf(trip.id));
   });
 
   app.patch<IdParams>('/trips/:id', { preHandler: requirePermission('trips.write') }, async (request, reply) => {
@@ -113,6 +128,17 @@ export async function tripsRoutes(app: FastifyInstance) {
       });
     }
 
+    // RN-002: não dá pra baixar a capacidade abaixo das reservas confirmadas.
+    const reservations = await reservationsOf(existing.id);
+    if (changes.commercial_capacity !== undefined) {
+      const confirmed = reservations.filter((r) => isConfirmed(r.reservation_status)).length;
+      if (changes.commercial_capacity < confirmed) {
+        return reply.code(409).send({
+          message: `A viagem já tem ${confirmed} reserva(s) confirmada(s); a capacidade não pode ficar abaixo disso`,
+        });
+      }
+    }
+
     const { old_values, new_values, changed } = diffFields(
       existing as unknown as Record<string, unknown>,
       changes as Record<string, unknown>,
@@ -127,7 +153,7 @@ export async function tripsRoutes(app: FastifyInstance) {
         new_values,
       });
     }
-    return presentTrip(trip, request.user!);
+    return presentTrip(trip, request.user!, reservations);
   });
 
   // Duplica só a viagem (configuração e textos) — sem passageiros, reservas ou
@@ -154,7 +180,7 @@ export async function tripsRoutes(app: FastifyInstance) {
       action: 'DUPLICATE',
       new_values: { source_trip_id: source.id },
     });
-    return reply.code(201).send(presentTrip(trip, request.user!));
+    return reply.code(201).send(presentTrip(trip, request.user!, []));
   });
 
   app.post<IdParams>('/trips/:id/cancel', { preHandler: requirePermission('trips.write') }, async (request, reply) => {
@@ -171,24 +197,29 @@ export async function tripsRoutes(app: FastifyInstance) {
       return reply.code(409).send({ message: 'Esta viagem não pode ser cancelada' });
     }
 
-    // Quando existirem reservas, cancelar a viagem vai cancelar/liberar as
-    // reservas aqui, dentro desta mesma transação.
+    // Cancela junto as reservas ativas (RN-007), na mesma transação. Pagamentos
+    // ficam no histórico; reembolsos são lançados à parte.
     const trip = await app.prisma.$transaction(async (tx) => {
+      const now = new Date();
       const updated = await tx.trip.update({
         where: { id: existing.id },
-        data: { status: 'CANCELADA', cancelled_at: new Date() },
+        data: { status: 'CANCELADA', cancelled_at: now },
+      });
+      const { count } = await tx.reservation.updateMany({
+        where: { trip_id: existing.id, reservation_status: { notIn: ['CANCELADA', 'REEMBOLSADA'] } },
+        data: { reservation_status: 'CANCELADA', cancelled_at: now, cancel_reason: `Viagem cancelada: ${reason}` },
       });
       await writeAudit(tx, request, {
         entity_type: 'Trip',
         entity_id: updated.id,
         action: 'CANCEL',
         old_values: { status: existing.status },
-        new_values: { status: updated.status },
+        new_values: { status: updated.status, reservations_cancelled: count },
         reason,
       });
       return updated;
     });
-    return presentTrip(trip, request.user!);
+    return presentTrip(trip, request.user!, await reservationsOf(trip.id));
   });
 
   app.post<IdParams>('/trips/:id/archive', { preHandler: requirePermission('trips.write') }, async (request, reply) => {
@@ -209,7 +240,7 @@ export async function tripsRoutes(app: FastifyInstance) {
       old_values: { status: existing.status },
       new_values: { status: trip.status },
     });
-    return presentTrip(trip, request.user!);
+    return presentTrip(trip, request.user!, await reservationsOf(trip.id));
   });
 
   app.post<IdParams>('/trips/:id/restore', { preHandler: requirePermission('trips.write') }, async (request, reply) => {
@@ -230,16 +261,14 @@ export async function tripsRoutes(app: FastifyInstance) {
       old_values: { status: existing.status },
       new_values: { status: trip.status },
     });
-    return presentTrip(trip, request.user!);
+    return presentTrip(trip, request.user!, await reservationsOf(trip.id));
   });
 
   app.get<IdParams>('/trips/:id/dashboard', { preHandler: requirePermission('trips.read') }, async (request, reply) => {
     const trip = await findTrip(request, reply);
     if (!trip) return;
-    return {
-      trip: presentTrip(trip, request.user!),
-      summary: emptyTripSummary(trip.commercial_capacity, hasPermission(request.user!, 'finance.read')),
-    };
+    const presented = presentTrip(trip, request.user!, await reservationsOf(trip.id));
+    return { trip: presented, summary: presented.summary };
   });
 
   // Quem pode acessar a viagem. Só ADMIN (trips.manage_access).

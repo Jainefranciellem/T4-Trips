@@ -37,6 +37,7 @@ beforeAll(async () => {
   // Banco limpo a cada execução.
   await app.prisma.$transaction([
     app.prisma.auditLog.deleteMany(),
+    app.prisma.reservation.deleteMany(),
     app.prisma.passwordResetToken.deleteMany(),
     app.prisma.tripUser.deleteMany(),
     app.prisma.trip.deleteMany(),

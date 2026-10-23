@@ -12,6 +12,7 @@ import Trips from "@/pages/Trips";
 import TripDetail from "@/pages/TripDetail";
 import Customers from "@/pages/Customers";
 import Users from "@/pages/Users";
+import PassengerPage from "@/pages/PassengerPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -29,6 +30,7 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/esqueci-senha" element={<ForgotPassword />} />
             <Route path="/redefinir-senha" element={<ResetPassword />} />
+            <Route path="/p/:token" element={<PassengerPage />} />
             <Route path="/" element={<MainLayout />}>
               <Route index element={<Navigate to="/viagens" replace />} />
               <Route path="viagens" element={<Trips />} />

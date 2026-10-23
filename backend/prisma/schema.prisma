@@ -39,6 +39,20 @@ enum TripStatus {
   ARQUIVADA
 }
 
+// RF-013. PARCIALMENTE_PAGA, PAGA e ATRASADA passam a ser calculados pelos
+// pagamentos (fase do financeiro); até lá ficam disponíveis só pela API.
+enum ReservationStatus {
+  PRE_RESERVA
+  RESERVADA
+  CONFIRMADA
+  PARCIALMENTE_PAGA
+  PAGA
+  ATRASADA
+  CANCELADA
+  REEMBOLSADA
+  LISTA_ESPERA
+}
+
 enum TripAccessLevel {
   VISUALIZAR
   OPERAR
@@ -62,6 +76,7 @@ model User {
   created_at         DateTime   @default(now())
   updated_at         DateTime   @updatedAt
 
+  reservations    Reservation[]
   trips_access    TripUser[]
   trips           Trip[]               @relation("TripCreatedBy")
   audit_logs      AuditLog[]
@@ -103,6 +118,7 @@ model Customer {
   updated_at              DateTime       @updatedAt
   archived_at             DateTime?
 
+  reservations  Reservation[]
   relationships CustomerRelationship[] @relation("CustomerOwner")
   related_to    CustomerRelationship[] @relation("CustomerRelated")
 
@@ -145,6 +161,8 @@ model Trip {
   // Configuração de vagas (RF-014) — usada quando as reservas forem implementadas.
   pending_holds_seat    Boolean    @default(true)
   reservation_ttl_hours Int?
+  // true: pré-reserva vencida deixa de ocupar vaga sozinha; false: só ao cancelar.
+  auto_release_holds    Boolean    @default(true)
   status                TripStatus @default(PLANEJADA)
   // Status antes de arquivar, pra "restaurar" voltar ao ponto certo.
   previous_status       TripStatus?
@@ -154,8 +172,9 @@ model Trip {
   archived_at           DateTime?
   cancelled_at          DateTime?
 
-  creator User       @relation("TripCreatedBy", fields: [created_by], references: [id])
-  users   TripUser[]
+  creator      User          @relation("TripCreatedBy", fields: [created_by], references: [id])
+  users        TripUser[]
+  reservations Reservation[]
 
   @@index([destination])
   @@index([departure_at])
@@ -172,6 +191,50 @@ model TripUser {
   user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@id([trip_id, user_id])
+}
+
+// Participação de um cliente numa viagem (RF-013). Uma reserva ativa por
+// cliente e viagem: índice único parcial criado à mão na migração
+// (reservations_one_active_per_customer), já que o Prisma não declara índice
+// com WHERE.
+model Reservation {
+  id                 String            @id @default(uuid())
+  trip_id            String
+  customer_id        String
+  reservation_status ReservationStatus @default(RESERVADA)
+  // Cópia do nome no momento da reserva (RN-006): listas antigas não mudam se
+  // o cadastro for editado depois. O vínculo com o cliente continua.
+  passenger_name     String
+  package_price      Int // centavos
+  discount_amount    Int               @default(0)
+  surcharge_amount   Int               @default(0)
+  final_price        Int
+  is_courtesy        Boolean           @default(false)
+  payment_due_date   DateTime?         @db.Date
+  // Prazo da pré-reserva (trip.reservation_ttl_hours).
+  hold_expires_at    DateTime?
+  notes              String?
+
+  // RN-012: só o hash do token; o link aparece uma vez, ao gerar.
+  public_token_hash       String?   @unique
+  public_token_created_at DateTime?
+  public_token_expires_at DateTime?
+  public_token_revoked_at DateTime?
+
+  created_by    String
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
+  cancelled_at  DateTime?
+  cancel_reason String?
+
+  trip     Trip     @relation(fields: [trip_id], references: [id])
+  customer Customer @relation(fields: [customer_id], references: [id])
+  creator  User     @relation(fields: [created_by], references: [id])
+
+  @@index([trip_id])
+  @@index([customer_id])
+  @@index([reservation_status])
+  @@map("reservations")
 }
 
 model AuditLog {

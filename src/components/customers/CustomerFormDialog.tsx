@@ -104,6 +104,9 @@ export function CustomerFormDialog({ open, onOpenChange, customer, onSaved }: Pr
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    // Este diálogo também abre de dentro do formulário de reserva; o submit
+    // atravessaria o portal até o formulário de fora.
+    e.stopPropagation();
     if (form.full_name.trim().length < 2) return setError('Informe o nome completo.');
     if (isMinor && !form.guardian_name.trim()) return setError('Passageiro menor de idade: informe o responsável.');
     setError(null);

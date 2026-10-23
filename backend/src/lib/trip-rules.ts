@@ -42,30 +42,3 @@ export function tripGroup(status: TripStatus): TripGroup {
       return 'futuras';
   }
 }
-
-export interface TripSummary {
-  passengers: number;
-  confirmed: number;
-  pending: number;
-  cancelled: number;
-  waitlist: number;
-  available_seats: number;
-  // Valores em centavos. Só preenchidos pra quem tem finance.read.
-  revenue_received: number | null;
-  revenue_pending: number | null;
-}
-
-// Ainda não há reservas (próxima fase): tudo zerado e as vagas livres iguais à
-// capacidade comercial. Ao implementar reservas, só esta função muda.
-export function emptyTripSummary(commercialCapacity: number, includeFinance: boolean): TripSummary {
-  return {
-    passengers: 0,
-    confirmed: 0,
-    pending: 0,
-    cancelled: 0,
-    waitlist: 0,
-    available_seats: commercialCapacity,
-    revenue_received: includeFinance ? 0 : null,
-    revenue_pending: includeFinance ? 0 : null,
-  };
-}

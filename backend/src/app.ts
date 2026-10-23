@@ -9,6 +9,7 @@ import { authRoutes } from './routes/auth.routes.js';
 import { usersRoutes } from './routes/users.routes.js';
 import { customersRoutes } from './routes/customers.routes.js';
 import { tripsRoutes } from './routes/trips.routes.js';
+import { reservationsRoutes } from './routes/reservations.routes.js';
 
 export async function buildApp() {
   const app = Fastify({ logger: process.env.NODE_ENV !== 'test' });
@@ -50,6 +51,7 @@ export async function buildApp() {
   await app.register(usersRoutes);
   await app.register(customersRoutes);
   await app.register(tripsRoutes);
+  await app.register(reservationsRoutes);
 
   return app;
 }
