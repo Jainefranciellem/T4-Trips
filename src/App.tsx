@@ -13,6 +13,7 @@ import TripDetail from "@/pages/TripDetail";
 import Customers from "@/pages/Customers";
 import Users from "@/pages/Users";
 import Vehicles from "@/pages/Vehicles";
+import Accommodations from "@/pages/Accommodations";
 import PassengerPage from "@/pages/PassengerPage";
 import NotFound from "./pages/NotFound";
 
@@ -39,6 +40,7 @@ const App = () => (
               <Route path="viagens/:id/:module" element={<TripDetail />} />
               <Route path="clientes" element={<Customers />} />
               <Route path="veiculos" element={<Vehicles />} />
+              <Route path="pousadas" element={<Accommodations />} />
               <Route path="usuarios" element={<Users />} />
             </Route>
             <Route path="*" element={<NotFound />} />

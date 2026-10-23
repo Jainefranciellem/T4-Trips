@@ -76,6 +76,18 @@ enum TripSeatStatus {
   BLOQUEADO
 }
 
+// RF-011
+enum RoomType {
+  INDIVIDUAL
+  CASAL
+  DUPLO
+  TRIPLO
+  QUADRUPLO
+  QUINTUPLO
+  SEXTUPLO
+  PERSONALIZADO
+}
+
 enum TripAccessLevel {
   VISUALIZAR
   OPERAR
@@ -198,7 +210,8 @@ model Trip {
   creator      User          @relation("TripCreatedBy", fields: [created_by], references: [id])
   users        TripUser[]
   reservations Reservation[]
-  vehicles     TripVehicle[]
+  vehicles       TripVehicle[]
+  accommodations TripAccommodation[]
 
   @@index([destination])
   @@index([departure_at])
@@ -255,6 +268,7 @@ model Reservation {
   customer         Customer         @relation(fields: [customer_id], references: [id])
   creator          User             @relation(fields: [created_by], references: [id])
   seat_assignments SeatAssignment[]
+  room_assignments RoomAssignment[]
 
   @@index([trip_id])
   @@index([customer_id])
@@ -366,6 +380,101 @@ model SeatAssignment {
   @@index([reservation_id])
   @@index([trip_seat_id])
   @@map("seat_assignments")
+}
+
+// Pousada reutilizável (spec 6.14). A capacidade total é a soma dos quartos
+// ativos, calculada na leitura.
+model Accommodation {
+  id         String       @id @default(uuid())
+  name       String
+  address    String?
+  city       String?
+  state      String?
+  phone      String?
+  email      String?
+  notes      String?
+  status     RecordStatus @default(ATIVO)
+  created_at DateTime     @default(now())
+  updated_at DateTime     @updatedAt
+
+  rooms               AccommodationRoom[]
+  trip_accommodations TripAccommodation[]
+
+  @@map("accommodations")
+}
+
+model AccommodationRoom {
+  id               String       @id @default(uuid())
+  accommodation_id String
+  identifier       String
+  name             String?
+  room_type        RoomType
+  capacity         Int
+  beds             Int
+  floor            String?
+  notes            String?
+  // RN-005: desativar não apaga o histórico.
+  status           RecordStatus @default(ATIVO)
+  created_at       DateTime     @default(now())
+  updated_at       DateTime     @updatedAt
+
+  accommodation Accommodation @relation(fields: [accommodation_id], references: [id])
+  trip_rooms    TripRoom[]
+
+  @@unique([accommodation_id, identifier])
+  @@map("accommodation_rooms")
+}
+
+model TripAccommodation {
+  id               String       @id @default(uuid())
+  trip_id          String
+  accommodation_id String
+  notes            String?
+  status           RecordStatus @default(ATIVO)
+  created_at       DateTime     @default(now())
+
+  trip          Trip          @relation(fields: [trip_id], references: [id])
+  accommodation Accommodation @relation(fields: [accommodation_id], references: [id])
+  rooms         TripRoom[]
+
+  @@unique([trip_id, accommodation_id])
+  @@map("trip_accommodations")
+}
+
+model TripRoom {
+  id                    String       @id @default(uuid())
+  trip_accommodation_id String
+  accommodation_room_id String
+  // Capacidade só nesta viagem (ex.: colchão extra); sem valor, vale a do quarto.
+  capacity_override     Int?
+  notes                 String?
+  status                RecordStatus @default(ATIVO)
+  created_at            DateTime     @default(now())
+
+  trip_accommodation TripAccommodation @relation(fields: [trip_accommodation_id], references: [id], onDelete: Cascade)
+  accommodation_room AccommodationRoom @relation(fields: [accommodation_room_id], references: [id])
+  assignments        RoomAssignment[]
+
+  @@unique([trip_accommodation_id, accommodation_room_id])
+  @@map("trip_rooms")
+}
+
+// spec 6.20. Ativa = removed_at nulo; índice único parcial na migração garante
+// um quarto ativo por reserva (RN-005).
+model RoomAssignment {
+  id             String    @id @default(uuid())
+  reservation_id String
+  trip_room_id   String
+  assigned_at    DateTime  @default(now())
+  removed_at     DateTime?
+  assigned_by    String
+
+  reservation Reservation @relation(fields: [reservation_id], references: [id])
+  trip_room   TripRoom    @relation(fields: [trip_room_id], references: [id])
+
+  @@index([reservation_id])
+  @@index([trip_room_id])
+  @@map("room_assignments")
 }
 
 model AuditLog {

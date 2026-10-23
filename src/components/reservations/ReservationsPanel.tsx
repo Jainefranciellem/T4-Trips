@@ -128,6 +128,7 @@ export function ReservationsPanel({ trip, mode }: { trip: Trip; mode: 'passageir
                 <p className="font-medium">{r.passenger_name}</p>
                 <StatusBadge r={r} />
                 {r.seat && <p className="text-muted-foreground">Assento {r.seat.seat_number} · {r.seat.vehicle_name}</p>}
+                {r.room && <p className="text-muted-foreground">Quarto {r.room.room_identifier} · {r.room.accommodation_name}</p>}
                 {r.final_price !== null && (
                   <p className="text-muted-foreground">
                     {r.is_courtesy ? 'Cortesia' : formatBRL(r.final_price)}
@@ -148,6 +149,7 @@ export function ReservationsPanel({ trip, mode }: { trip: Trip; mode: 'passageir
                 <TableHead>Status</TableHead>
                 {showPrices && <TableHead className="text-right">Valor</TableHead>}
                 <TableHead>Assento</TableHead>
+                <TableHead>Quarto</TableHead>
                 <TableHead>Prazo</TableHead>
                 <TableHead>Link</TableHead>
                 <TableHead className="w-12" />
@@ -172,6 +174,9 @@ export function ReservationsPanel({ trip, mode }: { trip: Trip; mode: 'passageir
                   )}
                   <TableCell className="text-sm whitespace-nowrap">
                     {r.seat ? `${r.seat.seat_number} · ${r.seat.vehicle_name}` : '—'}
+                  </TableCell>
+                  <TableCell className="text-sm whitespace-nowrap">
+                    {r.room ? `${r.room.room_identifier} · ${r.room.accommodation_name}` : '—'}
                   </TableCell>
                   <TableCell className="text-sm">
                     {r.payment_due_date ? formatDateShort(r.payment_due_date) : '—'}

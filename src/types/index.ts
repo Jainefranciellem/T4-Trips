@@ -11,6 +11,8 @@ export type Permission =
   | 'reservations.write'
   | 'vehicles.manage'
   | 'seats.assign'
+  | 'accommodations.manage'
+  | 'rooms.assign'
   | 'finance.read'
   | 'finance.write'
   | 'reports.read'
@@ -143,6 +145,7 @@ export interface Reservation {
   notes: string | null;
   public_link: PublicLinkState;
   seat: ReservationSeat | null;
+  room: ReservationRoom | null;
   public_token_created_at: string | null;
   public_token_expires_at: string | null;
   created_at: string;
@@ -164,7 +167,7 @@ export interface PublicReservation {
     public_instructions: string | null;
   };
   transport: { vehicle: string; identifier: string | null; seat_number: string; floor: number } | null;
-  accommodation: null;
+  accommodation: { name: string; address: string | null; city: string | null; state: string | null; room: string; room_name: string | null } | null;
   itinerary: unknown[];
 }
 
@@ -261,4 +264,70 @@ export interface TripVehicle {
   floors: LayoutFloor[];
   seats: TripSeat[];
   counts: { total: number; occupied: number; blocked: number; free: number };
+}
+
+export interface ReservationRoom {
+  trip_room_id: string;
+  room_identifier: string;
+  room_name: string | null;
+  accommodation_id: string;
+  accommodation_name: string;
+}
+
+export type RoomType = 'INDIVIDUAL' | 'CASAL' | 'DUPLO' | 'TRIPLO' | 'QUADRUPLO' | 'QUINTUPLO' | 'SEXTUPLO' | 'PERSONALIZADO';
+
+export interface AccommodationRoom {
+  id: string;
+  accommodation_id: string;
+  identifier: string;
+  name: string | null;
+  room_type: RoomType;
+  capacity: number;
+  beds: number;
+  floor: string | null;
+  notes: string | null;
+  status: 'ATIVO' | 'INATIVO';
+}
+
+export interface Accommodation {
+  id: string;
+  name: string;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  phone: string | null;
+  email: string | null;
+  notes: string | null;
+  status: 'ATIVO' | 'INATIVO';
+  rooms: AccommodationRoom[];
+  total_capacity: number;
+}
+
+export type RoomOccupancy = 'VAZIO' | 'PARCIAL' | 'COMPLETO';
+
+export interface TripRoom {
+  id: string;
+  accommodation_room_id: string;
+  identifier: string;
+  name: string | null;
+  room_type: RoomType;
+  beds: number;
+  floor: string | null;
+  capacity: number;
+  capacity_override: number | null;
+  notes: string | null;
+  status: 'ATIVO' | 'INATIVO';
+  active: boolean;
+  occupancy: RoomOccupancy;
+  guests: { reservation_id: string; passenger_name: string; reservation_status: ReservationStatus }[];
+}
+
+export interface TripAccommodation {
+  id: string;
+  trip_id: string;
+  notes: string | null;
+  status: 'ATIVO' | 'INATIVO';
+  accommodation: Omit<Accommodation, 'rooms' | 'total_capacity'>;
+  rooms: TripRoom[];
+  counts: { rooms: number; capacity: number; guests: number };
 }

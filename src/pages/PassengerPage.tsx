@@ -98,7 +98,23 @@ const PassengerPage = () => {
             </Section>
 
             <Section icon={BedDouble} title="Hospedagem">
-              <p className="text-muted-foreground">Pousada e quarto serão informados aqui.</p>
+              {data.accommodation ? (
+                <>
+                  <p className="font-medium">{data.accommodation.name}</p>
+                  {(data.accommodation.address || data.accommodation.city) && (
+                    <p className="text-muted-foreground">
+                      {[data.accommodation.address, [data.accommodation.city, data.accommodation.state].filter(Boolean).join('/')].filter(Boolean).join(' · ')}
+                    </p>
+                  )}
+                  <p className="text-lg">
+                    <span className="text-muted-foreground text-sm">Seu quarto: </span>
+                    <strong>{data.accommodation.room}</strong>
+                    {data.accommodation.room_name && <span className="text-sm text-muted-foreground"> · {data.accommodation.room_name}</span>}
+                  </p>
+                </>
+              ) : (
+                <p className="text-muted-foreground">Pousada e quarto serão informados aqui.</p>
+              )}
             </Section>
 
             {data.trip.included_services && (

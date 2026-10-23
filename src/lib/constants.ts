@@ -1,4 +1,4 @@
-import type { ManualReservationStatus, ReservationStatus, Role, SeatType, TripGroup, TripStatus, VehicleCategory } from '@/types';
+import type { ManualReservationStatus, ReservationStatus, Role, RoomOccupancy, RoomType, SeatType, TripGroup, TripStatus, VehicleCategory } from '@/types';
 
 export const tripStatusLabel: Record<TripStatus, string> = {
   PLANEJADA: 'Planejada',
@@ -90,7 +90,7 @@ export const tripModules = [
   { key: 'resumo', label: 'Resumo', ready: true },
   { key: 'passageiros', label: 'Passageiros', ready: true },
   { key: 'transporte', label: 'Transporte e assentos', ready: true },
-  { key: 'pousadas', label: 'Pousadas e quartos', ready: false },
+  { key: 'pousadas', label: 'Pousadas e quartos', ready: true },
   { key: 'reservas', label: 'Reservas', ready: true },
   { key: 'pagamentos', label: 'Pagamentos', ready: false },
   { key: 'despesas', label: 'Despesas', ready: false },
@@ -122,4 +122,33 @@ export const seatTypeLabel: Record<SeatType, string> = {
   LEITO: 'Leito',
   EXECUTIVO: 'Executivo',
   ESPECIAL: 'Especial',
+};
+
+export const roomTypeLabel: Record<RoomType, string> = {
+  INDIVIDUAL: 'Individual',
+  CASAL: 'Casal',
+  DUPLO: 'Duplo',
+  TRIPLO: 'Triplo',
+  QUADRUPLO: 'Quádruplo',
+  QUINTUPLO: 'Quíntuplo',
+  SEXTUPLO: 'Sêxtuplo',
+  PERSONALIZADO: 'Personalizado',
+};
+
+// Sugestão ao escolher o tipo; o cadastro pode mudar.
+export const roomTypeCapacity: Record<RoomType, number> = {
+  INDIVIDUAL: 1,
+  CASAL: 2,
+  DUPLO: 2,
+  TRIPLO: 3,
+  QUADRUPLO: 4,
+  QUINTUPLO: 5,
+  SEXTUPLO: 6,
+  PERSONALIZADO: 2,
+};
+
+export const roomOccupancyLabel: Record<RoomOccupancy, string> = {
+  VAZIO: 'Vazio',
+  PARCIAL: 'Com vaga',
+  COMPLETO: 'Completo',
 };

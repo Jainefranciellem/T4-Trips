@@ -209,6 +209,10 @@ export async function tripsRoutes(app: FastifyInstance) {
         where: { removed_at: null, reservation: { trip_id: existing.id } },
         data: { removed_at: now },
       });
+      await tx.roomAssignment.updateMany({
+        where: { removed_at: null, reservation: { trip_id: existing.id } },
+        data: { removed_at: now },
+      });
       const { count } = await tx.reservation.updateMany({
         where: { trip_id: existing.id, reservation_status: { notIn: ['CANCELADA', 'REEMBOLSADA'] } },
         data: { reservation_status: 'CANCELADA', cancelled_at: now, cancel_reason: `Viagem cancelada: ${reason}` },
