@@ -53,6 +53,29 @@ enum ReservationStatus {
   LISTA_ESPERA
 }
 
+// RF-007
+enum VehicleCategory {
+  VAN
+  MICRO_ONIBUS
+  ONIBUS_CONVENCIONAL
+  ONIBUS_EXECUTIVO
+  ONIBUS_LD
+  ONIBUS_LDD
+  PERSONALIZADO
+}
+
+enum RecordStatus {
+  ATIVO
+  INATIVO
+}
+
+// Só LIVRE/BLOQUEADO ficam gravados. "Reservado" e "Confirmado" (spec 6.13)
+// saem da reserva atribuída ao assento, pra nunca ficarem desencontrados.
+enum TripSeatStatus {
+  LIVRE
+  BLOQUEADO
+}
+
 enum TripAccessLevel {
   VISUALIZAR
   OPERAR
@@ -175,6 +198,7 @@ model Trip {
   creator      User          @relation("TripCreatedBy", fields: [created_by], references: [id])
   users        TripUser[]
   reservations Reservation[]
+  vehicles     TripVehicle[]
 
   @@index([destination])
   @@index([departure_at])
@@ -227,14 +251,121 @@ model Reservation {
   cancelled_at  DateTime?
   cancel_reason String?
 
-  trip     Trip     @relation(fields: [trip_id], references: [id])
-  customer Customer @relation(fields: [customer_id], references: [id])
-  creator  User     @relation(fields: [created_by], references: [id])
+  trip             Trip             @relation(fields: [trip_id], references: [id])
+  customer         Customer         @relation(fields: [customer_id], references: [id])
+  creator          User             @relation(fields: [created_by], references: [id])
+  seat_assignments SeatAssignment[]
 
   @@index([trip_id])
   @@index([customer_id])
   @@index([reservation_status])
   @@map("reservations")
+}
+
+// Modelo reutilizável de veículo (spec 6.10). A capacidade é a do layout padrão.
+model VehicleTemplate {
+  id           String          @id @default(uuid())
+  name         String
+  category     VehicleCategory
+  code         String?
+  capacity     Int
+  floors       Int             @default(1)
+  aisle_config String?
+  description  String?
+  status       RecordStatus    @default(ATIVO)
+  created_at   DateTime        @default(now())
+  updated_at   DateTime        @updatedAt
+
+  layouts       SeatLayout[]
+  trip_vehicles TripVehicle[]
+
+  @@map("vehicle_templates")
+}
+
+// layout_data: { floors: [{ floor, rows, cols }], seats: [{ floor, row, col,
+// number, type, accessible, blocked }] } — validado em seat-layout.schema.ts.
+model SeatLayout {
+  id                  String   @id @default(uuid())
+  vehicle_template_id String
+  name                String
+  version             Int      @default(1)
+  layout_data         Json
+  is_default          Boolean  @default(false)
+  created_at          DateTime @default(now())
+  updated_at          DateTime @updatedAt
+
+  vehicle_template VehicleTemplate @relation(fields: [vehicle_template_id], references: [id])
+  trip_vehicles    TripVehicle[]
+
+  @@map("seat_layouts")
+}
+
+// Veículo usado numa viagem (spec 6.12). Os assentos são copiados do layout
+// ao adicionar: editar o modelo depois não mexe em viagens já montadas.
+model TripVehicle {
+  id                   String       @id @default(uuid())
+  trip_id              String
+  vehicle_template_id  String
+  seat_layout_id       String
+  layout_version       Int
+  operational_name     String
+  identifier           String?
+  driver_name          String?
+  operational_capacity Int
+  notes                String?
+  status               RecordStatus @default(ATIVO)
+  sort_order           Int          @default(0)
+  created_at           DateTime     @default(now())
+  updated_at           DateTime     @updatedAt
+
+  trip             Trip            @relation(fields: [trip_id], references: [id])
+  vehicle_template VehicleTemplate @relation(fields: [vehicle_template_id], references: [id])
+  seat_layout      SeatLayout      @relation(fields: [seat_layout_id], references: [id])
+  seats            TripSeat[]
+
+  @@index([trip_id])
+  @@map("trip_vehicles")
+}
+
+model TripSeat {
+  id              String         @id @default(uuid())
+  trip_vehicle_id String
+  seat_number     String
+  floor           Int            @default(1)
+  row             Int
+  col             Int
+  seat_type       String         @default("NORMAL")
+  accessible      Boolean        @default(false)
+  status          TripSeatStatus @default(LIVRE)
+  blocked_reason  String?
+  created_at      DateTime       @default(now())
+  updated_at      DateTime       @updatedAt
+
+  trip_vehicle TripVehicle      @relation(fields: [trip_vehicle_id], references: [id], onDelete: Cascade)
+  assignments  SeatAssignment[]
+
+  @@unique([trip_vehicle_id, seat_number])
+  @@index([trip_vehicle_id])
+  @@map("trip_seats")
+}
+
+// Histórico de quem sentou onde (spec 6.19). Atribuição ativa = removed_at
+// nulo; índices únicos parciais na migração garantem um passageiro por
+// assento e um assento por reserva (RN-003).
+model SeatAssignment {
+  id             String    @id @default(uuid())
+  reservation_id String
+  trip_seat_id   String
+  assigned_at    DateTime  @default(now())
+  removed_at     DateTime?
+  assigned_by    String
+
+  reservation Reservation @relation(fields: [reservation_id], references: [id])
+  trip_seat   TripSeat    @relation(fields: [trip_seat_id], references: [id])
+
+  @@index([reservation_id])
+  @@index([trip_seat_id])
+  @@map("seat_assignments")
 }
 
 model AuditLog {

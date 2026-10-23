@@ -80,7 +80,21 @@ const PassengerPage = () => {
             </Section>
 
             <Section icon={Bus} title="Transporte">
-              <p className="text-muted-foreground">Veículo e assento serão informados aqui.</p>
+              {data.transport ? (
+                <>
+                  <p>
+                    <span className="text-muted-foreground">Veículo: </span>
+                    {data.transport.vehicle}
+                    {data.transport.identifier && ` (${data.transport.identifier})`}
+                  </p>
+                  <p className="text-lg">
+                    <span className="text-muted-foreground text-sm">Seu assento: </span>
+                    <strong>{data.transport.seat_number}</strong>
+                  </p>
+                </>
+              ) : (
+                <p className="text-muted-foreground">Veículo e assento serão informados aqui.</p>
+              )}
             </Section>
 
             <Section icon={BedDouble} title="Hospedagem">

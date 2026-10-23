@@ -10,6 +10,7 @@ import { TripFormDialog } from '@/components/trips/TripFormDialog';
 import { CancelTripDialog } from '@/components/trips/CancelTripDialog';
 import { TripAccessCard } from '@/components/trips/TripAccessCard';
 import { ReservationsPanel } from '@/components/reservations/ReservationsPanel';
+import { TransportPanel } from '@/components/transport/TransportPanel';
 import { useAuth } from '@/contexts/AuthContext';
 import { getTrip } from '@/lib/trips.service';
 import { canEditTrip } from '@/lib/trip-rules';
@@ -160,6 +161,7 @@ const TripDetail = () => {
       {(current.key === 'passageiros' || current.key === 'reservas') && (
         <ReservationsPanel key={current.key} trip={trip} mode={current.key} />
       )}
+      {current.key === 'transporte' && <TransportPanel trip={trip} />}
 
       {current.key === 'configuracoes' && (
         <div className="grid gap-6 lg:grid-cols-[2fr_1fr] items-start">

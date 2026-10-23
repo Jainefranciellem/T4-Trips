@@ -18,6 +18,7 @@ import {
   isEnded,
   isExpiredHold,
 } from '../lib/reservation-rules.js';
+import { lockTrip } from '../lib/locks.js';
 import { requireAuth, requirePermission, type AuthUser } from '../middleware/auth.js';
 import { presentCustomer } from './customers.routes.js';
 import { tripScope, tripWriteScope } from './trips.routes.js';
@@ -43,8 +44,32 @@ function linkState(r: Reservation, now = new Date()) {
   return 'ATIVO' as const;
 }
 
-function presentReservation(r: Reservation & { customer: Customer }, user: AuthUser) {
-  const { public_token_hash: _hash, customer, ...rest } = r;
+// Assento ativo da reserva, pra listas e página pública.
+export const activeSeatInclude = {
+  where: { removed_at: null },
+  include: { trip_seat: { include: { trip_vehicle: { select: { id: true, operational_name: true, identifier: true } } } } },
+} satisfies Prisma.Reservation$seat_assignmentsArgs;
+
+type SeatAssignmentWithSeat = Prisma.SeatAssignmentGetPayload<{ include: typeof activeSeatInclude.include }>;
+
+const presentSeat = (a: SeatAssignmentWithSeat | undefined) =>
+  a
+    ? {
+        trip_seat_id: a.trip_seat_id,
+        seat_number: a.trip_seat.seat_number,
+        floor: a.trip_seat.floor,
+        trip_vehicle_id: a.trip_seat.trip_vehicle.id,
+        vehicle_name: a.trip_seat.trip_vehicle.operational_name,
+      }
+    : null;
+
+const withSeat = { customer: true, seat_assignments: activeSeatInclude } as const;
+
+function presentReservation(
+  r: Reservation & { customer: Customer; seat_assignments?: SeatAssignmentWithSeat[] },
+  user: AuthUser,
+) {
+  const { public_token_hash: _hash, customer, seat_assignments, ...rest } = r;
   const prices = canSeePrices(user);
   return {
     ...rest,
@@ -55,14 +80,21 @@ function presentReservation(r: Reservation & { customer: Customer }, user: AuthU
     notes: user.role === 'VISUALIZADOR' ? null : r.notes,
     hold_expired: isExpiredHold(r),
     public_link: linkState(r),
+    seat: presentSeat(seat_assignments?.[0]),
     customer: presentCustomer(customer, user),
   };
 }
 
-// Serializa as operações que mexem em vagas da mesma viagem: duas pessoas
-// reservando a última vaga ao mesmo tempo não passam juntas (RNF-004).
-async function lockTrip(tx: Tx, tripId: string) {
-  await tx.$queryRaw`SELECT id FROM "Trip" WHERE id = ${tripId} FOR UPDATE`;
+
+// RN-007: cancelar libera o assento (o histórico fica em seat_assignments).
+export async function releaseSeat(tx: Tx, reservationId: string) {
+  const active = await tx.seatAssignment.findFirst({
+    where: { reservation_id: reservationId, removed_at: null },
+    include: { trip_seat: true },
+  });
+  if (!active) return null;
+  await tx.seatAssignment.update({ where: { id: active.id }, data: { removed_at: new Date() } });
+  return active.trip_seat.seat_number;
 }
 
 async function capacityError(tx: Tx, trip: Trip, nextStatus: Reservation['reservation_status'], excludeId?: string) {
@@ -106,13 +138,14 @@ export async function reservationsRoutes(app: FastifyInstance) {
 
       const r = await app.prisma.reservation.findUnique({
         where: { public_token_hash: hashToken(token) },
-        include: { trip: true },
+        include: { trip: true, seat_assignments: activeSeatInclude },
       });
       if (!r || linkState(r) !== 'ATIVO') return unavailable();
+      const seat = r.seat_assignments[0]?.trip_seat;
       if (r.trip.status === 'CANCELADA' || r.trip.status === 'ARQUIVADA') return unavailable();
 
-      // RN-013: só dados públicos. Assento, quarto e roteiro entram nas
-      // próximas fases.
+      // RN-013: só dados públicos. Quarto e roteiro entram nas próximas fases.
+      // Motorista e capacidade do veículo são dados operacionais e ficam de fora.
       return {
         passenger_name: r.passenger_name,
         waitlist: r.reservation_status === 'LISTA_ESPERA',
@@ -125,7 +158,9 @@ export async function reservationsRoutes(app: FastifyInstance) {
           included_services: r.trip.included_services,
           public_instructions: r.trip.public_instructions,
         },
-        transport: null,
+        transport: seat
+          ? { vehicle: seat.trip_vehicle.operational_name, identifier: seat.trip_vehicle.identifier, seat_number: seat.seat_number, floor: seat.floor }
+          : null,
         accommodation: null,
         itinerary: [],
       };
@@ -147,7 +182,7 @@ export async function reservationsRoutes(app: FastifyInstance) {
       const user = request.user!;
       const r = await admin.prisma.reservation.findFirst({
         where: { id: request.params.id, trip: write ? tripWriteScope(user) : tripScope(user) },
-        include: { customer: true, trip: true },
+        include: { ...withSeat, trip: true },
       });
       if (!r) reply.code(404).send({ message: 'Reserva não encontrada' });
       return r;
@@ -165,7 +200,7 @@ export async function reservationsRoutes(app: FastifyInstance) {
 
       const items = await admin.prisma.reservation.findMany({
         where,
-        include: { customer: true },
+        include: withSeat,
         orderBy: { passenger_name: 'asc' },
       });
       return items.map((r) => presentReservation(r, request.user!));
@@ -227,7 +262,7 @@ export async function reservationsRoutes(app: FastifyInstance) {
             public_token_expires_at: input.public_link_expires_at ?? null,
             created_by: request.user!.id,
           },
-          include: { customer: true },
+          include: withSeat,
         });
         await writeAudit(tx, request, {
           entity_type: 'Reservation',
@@ -296,6 +331,8 @@ export async function reservationsRoutes(app: FastifyInstance) {
           const full = await capacityError(tx, existing.trip, changes.reservation_status!, existing.id);
           if (full) return { error: full };
           data.hold_expires_at = holdExpiry(existing.trip, changes.reservation_status!);
+          // Voltar pra lista de espera devolve o assento.
+          if (changes.reservation_status === 'LISTA_ESPERA') await releaseSeat(tx, existing.id);
         }
 
         const { old_values, new_values, changed } = diffFields(
@@ -326,16 +363,17 @@ export async function reservationsRoutes(app: FastifyInstance) {
       }
 
       const updated = await admin.prisma.$transaction(async (tx) => {
+        const released = await releaseSeat(tx, existing.id);
         const r = await tx.reservation.update({
           where: { id: existing.id },
           data: { reservation_status: 'CANCELADA', cancelled_at: new Date(), cancel_reason: reason },
-          include: { customer: true },
+          include: withSeat,
         });
         await writeAudit(tx, request, {
           entity_type: 'Reservation',
           entity_id: r.id,
           action: 'CANCEL',
-          old_values: { reservation_status: existing.reservation_status },
+          old_values: { reservation_status: existing.reservation_status, ...(released ? { seat: released } : {}) },
           new_values: { reservation_status: 'CANCELADA' },
           reason,
         });
@@ -367,7 +405,7 @@ export async function reservationsRoutes(app: FastifyInstance) {
               public_token_expires_at: expires_at ?? null,
               public_token_revoked_at: null,
             },
-            include: { customer: true },
+            include: withSeat,
           });
           await writeAudit(tx, request, {
             entity_type: 'Reservation',
@@ -395,7 +433,7 @@ export async function reservationsRoutes(app: FastifyInstance) {
           const r = await tx.reservation.update({
             where: { id: existing.id },
             data: { public_token_revoked_at: new Date() },
-            include: { customer: true },
+            include: withSeat,
           });
           await writeAudit(tx, request, { entity_type: 'Reservation', entity_id: r.id, action: 'REVOKE_LINK' });
           return r;

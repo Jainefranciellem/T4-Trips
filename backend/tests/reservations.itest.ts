@@ -43,7 +43,11 @@ beforeAll(async () => {
 
   await app.prisma.$transaction([
     app.prisma.auditLog.deleteMany(),
+    app.prisma.seatAssignment.deleteMany(),
     app.prisma.reservation.deleteMany(),
+    app.prisma.tripVehicle.deleteMany(),
+    app.prisma.seatLayout.deleteMany(),
+    app.prisma.vehicleTemplate.deleteMany(),
     app.prisma.passwordResetToken.deleteMany(),
     app.prisma.tripUser.deleteMany(),
     app.prisma.trip.deleteMany(),

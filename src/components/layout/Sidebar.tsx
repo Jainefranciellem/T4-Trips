@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Logo } from '@/components/common/Logo';
 import { roleLabel } from '@/lib/constants';
 import type { Permission } from '@/types';
-import { Map, Users, UserCog, LogOut, Menu, X } from 'lucide-react';
+import { Bus, Map, Users, UserCog, LogOut, Menu, X } from 'lucide-react';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -16,6 +16,7 @@ interface SidebarProps {
 const navItems: { path: string; icon: typeof Map; label: string; permission: Permission }[] = [
   { path: '/viagens', icon: Map, label: 'Minhas Trips', permission: 'trips.read' },
   { path: '/clientes', icon: Users, label: 'Clientes', permission: 'customers.read' },
+  { path: '/veiculos', icon: Bus, label: 'Veículos', permission: 'vehicles.manage' },
   { path: '/usuarios', icon: UserCog, label: 'Usuários', permission: 'users.manage' },
 ];
 

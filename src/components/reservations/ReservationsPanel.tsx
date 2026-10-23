@@ -127,6 +127,7 @@ export function ReservationsPanel({ trip, mode }: { trip: Trip; mode: 'passageir
               <div className="min-w-0 text-sm space-y-1">
                 <p className="font-medium">{r.passenger_name}</p>
                 <StatusBadge r={r} />
+                {r.seat && <p className="text-muted-foreground">Assento {r.seat.seat_number} · {r.seat.vehicle_name}</p>}
                 {r.final_price !== null && (
                   <p className="text-muted-foreground">
                     {r.is_courtesy ? 'Cortesia' : formatBRL(r.final_price)}
@@ -146,6 +147,7 @@ export function ReservationsPanel({ trip, mode }: { trip: Trip; mode: 'passageir
                 <TableHead>Passageiro</TableHead>
                 <TableHead>Status</TableHead>
                 {showPrices && <TableHead className="text-right">Valor</TableHead>}
+                <TableHead>Assento</TableHead>
                 <TableHead>Prazo</TableHead>
                 <TableHead>Link</TableHead>
                 <TableHead className="w-12" />
@@ -168,6 +170,9 @@ export function ReservationsPanel({ trip, mode }: { trip: Trip; mode: 'passageir
                       {r.is_courtesy ? 'Cortesia' : r.final_price !== null ? formatBRL(r.final_price) : '—'}
                     </TableCell>
                   )}
+                  <TableCell className="text-sm whitespace-nowrap">
+                    {r.seat ? `${r.seat.seat_number} · ${r.seat.vehicle_name}` : '—'}
+                  </TableCell>
                   <TableCell className="text-sm">
                     {r.payment_due_date ? formatDateShort(r.payment_due_date) : '—'}
                   </TableCell>

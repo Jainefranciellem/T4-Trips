@@ -1,4 +1,4 @@
-import type { ManualReservationStatus, ReservationStatus, Role, TripGroup, TripStatus } from '@/types';
+import type { ManualReservationStatus, ReservationStatus, Role, SeatType, TripGroup, TripStatus, VehicleCategory } from '@/types';
 
 export const tripStatusLabel: Record<TripStatus, string> = {
   PLANEJADA: 'Planejada',
@@ -89,7 +89,7 @@ export const roleDescription: Record<Role, string> = {
 export const tripModules = [
   { key: 'resumo', label: 'Resumo', ready: true },
   { key: 'passageiros', label: 'Passageiros', ready: true },
-  { key: 'transporte', label: 'Transporte e assentos', ready: false },
+  { key: 'transporte', label: 'Transporte e assentos', ready: true },
   { key: 'pousadas', label: 'Pousadas e quartos', ready: false },
   { key: 'reservas', label: 'Reservas', ready: true },
   { key: 'pagamentos', label: 'Pagamentos', ready: false },
@@ -105,3 +105,21 @@ export const brazilStates = [
   'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA',
   'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO',
 ];
+
+export const vehicleCategoryLabel: Record<VehicleCategory, string> = {
+  VAN: 'Van',
+  MICRO_ONIBUS: 'Micro-ônibus',
+  ONIBUS_CONVENCIONAL: 'Ônibus convencional',
+  ONIBUS_EXECUTIVO: 'Ônibus executivo',
+  ONIBUS_LD: 'Ônibus LD',
+  ONIBUS_LDD: 'Ônibus LDD (dois andares)',
+  PERSONALIZADO: 'Personalizado',
+};
+
+export const seatTypeLabel: Record<SeatType, string> = {
+  NORMAL: 'Convencional',
+  SEMI_LEITO: 'Semi-leito',
+  LEITO: 'Leito',
+  EXECUTIVO: 'Executivo',
+  ESPECIAL: 'Especial',
+};
