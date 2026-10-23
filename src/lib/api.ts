@@ -80,3 +80,20 @@ export async function apiFetch<T>(
 
   return response.json();
 }
+
+// Baixa um arquivo (relatório) com a mesma autenticação e renovação de sessão
+// do apiFetch. Devolve o conteúdo e o nome sugerido pelo servidor.
+export async function apiFetchFile(endpoint: string, isRetry = false): Promise<{ blob: Blob; filename: string }> {
+  const token = getAccessToken();
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (response.status === 401 && !isRetry && (await refreshAccessToken())) return apiFetchFile(endpoint, true);
+  if (!response.ok) {
+    const body = await response.json().catch(() => null);
+    throw new ApiError(body?.message ?? 'Erro ao gerar o arquivo', response.status, body);
+  }
+  const disposition = response.headers.get('Content-Disposition') ?? '';
+  const filename = /filename="([^"]+)"/.exec(disposition)?.[1] ?? 'relatorio';
+  return { blob: await response.blob(), filename: decodeURIComponent(filename) };
+}

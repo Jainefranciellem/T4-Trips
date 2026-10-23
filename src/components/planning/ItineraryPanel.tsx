@@ -11,8 +11,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { createItineraryItem, deleteItineraryItem, listItinerary, reorderItinerary, updateItineraryItem, type ItineraryInput } from '@/lib/planning.service';
-import { printTable } from '@/lib/print';
-import { formatDay, formatDateTime } from '@/lib/format';
+import { getReport } from '@/lib/reports.service';
+import { formatDay } from '@/lib/format';
 import type { ItineraryItem, Trip } from '@/types';
 import { ArrowDown, ArrowUp, Clock, EyeOff, Loader2, MapPin, Pencil, Plus, Printer, Trash2, Users } from 'lucide-react';
 
@@ -150,7 +150,7 @@ function ItemDialog({ item, days, busy, onClose, onSave }: { item: (ItineraryInp
 
 // RF-016: roteiro por dia.
 export function ItineraryPanel({ trip }: { trip: Trip }) {
-  const { user, can } = useAuth();
+  const { can } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const canWrite = can('itinerary.write') && !['CANCELADA', 'ARQUIVADA'].includes(trip.status);
@@ -183,24 +183,11 @@ export function ItineraryPanel({ trip }: { trip: Trip }) {
     op.mutate(() => reorderItinerary(trip.id, ids));
   };
 
-  const print = () => {
-    const rows = (query.data ?? []).map((i) => [
-      formatDay(i.itinerary_date),
-      [i.start_time, i.end_time].filter(Boolean).join('–') || '—',
-      i.activity + (i.is_public ? '' : ' (interno)'),
-      i.location ?? '',
-      i.meeting_point ?? '',
-      i.public_instructions ?? '',
-    ]);
-    const ok = printTable({
-      title: `Roteiro · ${trip.name}`,
-      subtitle: `${trip.destination} · ${formatDateTime(trip.departure_at)} a ${formatDateTime(trip.return_at)}`,
-      generatedBy: user?.name,
-      headers: ['Dia', 'Horário', 'Atividade', 'Local', 'Encontro', 'Orientações'],
-      rows,
-    });
-    if (!ok) toast({ title: 'Libere as janelas pop-up para imprimir', variant: 'destructive' });
-  };
+  // PDF do servidor (mesmo da aba Relatórios).
+  const print = () =>
+    getReport(trip.id, 'roteiro', 'pdf', { internal: '1' }).catch((err: Error) =>
+      toast({ title: 'Não foi possível gerar o PDF', description: err.message, variant: 'destructive' }),
+    );
 
   if (query.isLoading) return <Skeleton className="h-64 rounded-xl" />;
 

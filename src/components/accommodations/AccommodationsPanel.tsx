@@ -16,8 +16,7 @@ import {
   updateTripAccommodation,
   updateTripRoom,
 } from '@/lib/accommodations.service';
-import { printTable } from '@/lib/print';
-import { formatDateTime } from '@/lib/format';
+import { getReport } from '@/lib/reports.service';
 import { roomOccupancyLabel, roomTypeLabel } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import type { Reservation, ReservationStatus, RoomOccupancy, Trip, TripAccommodation, TripRoom } from '@/types';
@@ -35,7 +34,7 @@ const occupancyVariant: Record<RoomOccupancy, 'cancelled' | 'warning' | 'success
 };
 
 export function AccommodationsPanel({ trip }: { trip: Trip }) {
-  const { user, can } = useAuth();
+  const { can } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const open = !['CANCELADA', 'ARQUIVADA'].includes(trip.status);
@@ -74,23 +73,11 @@ export function AccommodationsPanel({ trip }: { trip: Trip }) {
     op.mutate(() => assignRoom(placing.id, room.id, !!placing.room));
   };
 
-  const printList = () => {
-    const rows = accommodations.flatMap((a) =>
-      a.rooms.flatMap((r) =>
-        r.guests.length
-          ? r.guests.map((g) => [a.accommodation.name, r.identifier + (r.name ? ` · ${r.name}` : ''), roomTypeLabel[r.room_type], g.passenger_name])
-          : [],
-      ),
+  // PDF do servidor (mesmo da aba Relatórios).
+  const printList = () =>
+    getReport(trip.id, 'por-pousada', 'pdf').catch((err: Error) =>
+      toast({ title: 'Não foi possível gerar o PDF', description: err.message, variant: 'destructive' }),
     );
-    const ok = printTable({
-      title: `Lista de hospedagem · ${trip.name}`,
-      subtitle: `${trip.destination} · ${formatDateTime(trip.departure_at)} a ${formatDateTime(trip.return_at)}`,
-      generatedBy: user?.name,
-      headers: ['Pousada', 'Quarto', 'Tipo', 'Hóspede'],
-      rows,
-    });
-    if (!ok) toast({ title: 'Libere as janelas pop-up para imprimir', variant: 'destructive' });
-  };
 
   if (accQuery.isLoading) return <Skeleton className="h-64 rounded-xl" />;
   if (accQuery.isError) return <p className="text-destructive">{(accQuery.error as Error).message}</p>;

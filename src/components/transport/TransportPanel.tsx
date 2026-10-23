@@ -18,9 +18,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { listReservations } from '@/lib/reservations.service';
 import { assignSeat, blockSeat, listTripVehicles, removeTripVehicle, unassignSeat, unblockSeat } from '@/lib/vehicles.service';
-import { compareSeatNumbers } from '@/lib/seat-layout';
-import { printTable } from '@/lib/print';
-import { formatDateTime } from '@/lib/format';
+import { getReport } from '@/lib/reports.service';
 import { cn } from '@/lib/utils';
 import type { Reservation, ReservationStatus, Trip, TripSeat, TripVehicle } from '@/types';
 import { Bus, Pencil, Plus, Printer, Trash2, X } from 'lucide-react';
@@ -31,7 +29,7 @@ import { SeatDialog } from './SeatDialog';
 const NO_SEAT: ReservationStatus[] = ['CANCELADA', 'REEMBOLSADA', 'LISTA_ESPERA'];
 
 export function TransportPanel({ trip }: { trip: Trip }) {
-  const { user, can } = useAuth();
+  const { can } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const canAssign = can('seats.assign') && !['CANCELADA', 'ARQUIVADA'].includes(trip.status);
@@ -99,22 +97,11 @@ export function TransportPanel({ trip }: { trip: Trip }) {
     else setSeatOpen(seat.id);
   };
 
-  const printList = () => {
-    const rows = vehicles.flatMap((v) =>
-      v.seats
-        .filter((s) => s.occupant)
-        .sort((a, b) => compareSeatNumbers(a.seat_number, b.seat_number))
-        .map((s) => [v.operational_name, s.seat_number, s.occupant!.passenger_name]),
+  // PDF do servidor (mesmo da aba Relatórios).
+  const printList = () =>
+    getReport(trip.id, 'por-assento', 'pdf').catch((err: Error) =>
+      toast({ title: 'Não foi possível gerar o PDF', description: err.message, variant: 'destructive' }),
     );
-    const ok = printTable({
-      title: `Lista por assento · ${trip.name}`,
-      subtitle: `${trip.destination} · saída ${formatDateTime(trip.departure_at)} · ${trip.departure_location}`,
-      generatedBy: user?.name,
-      headers: ['Veículo', 'Assento', 'Passageiro'],
-      rows,
-    });
-    if (!ok) toast({ title: 'Libere as janelas pop-up para imprimir', variant: 'destructive' });
-  };
 
   if (vehiclesQuery.isLoading) return <Skeleton className="h-64 rounded-xl" />;
   if (vehiclesQuery.isError) return <p className="text-destructive">{(vehiclesQuery.error as Error).message}</p>;

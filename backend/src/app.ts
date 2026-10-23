@@ -18,6 +18,7 @@ import { financeRoutes } from './routes/finance.routes.js';
 import { expensesRoutes } from './routes/expenses.routes.js';
 import { pricingRoutes } from './routes/pricing.routes.js';
 import { itineraryRoutes } from './routes/itinerary.routes.js';
+import { reportsRoutes } from './routes/reports.routes.js';
 
 export async function buildApp() {
   const app = Fastify({ logger: process.env.NODE_ENV !== 'test' });
@@ -25,6 +26,8 @@ export async function buildApp() {
   await app.register(cors, {
     origin: env.CORS_ORIGIN.split(',').map((o) => o.trim()),
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    // O site lê o nome do arquivo dos relatórios.
+    exposedHeaders: ['Content-Disposition'],
   });
   // Sem limite global; as rotas sensíveis (login, link público) declaram o seu.
   await app.register(rateLimit, { global: false });
@@ -68,6 +71,7 @@ export async function buildApp() {
   await app.register(expensesRoutes);
   await app.register(pricingRoutes);
   await app.register(itineraryRoutes);
+  await app.register(reportsRoutes);
 
   return app;
 }
