@@ -1,6 +1,8 @@
 # Backup semanal do banco (política em docs/backup.md).
-# Guarda o dump como artefato privado do repositório por 90 dias.
-# Precisa do segredo BACKUP_DATABASE_URL (conexão direta do Neon, sem pooler).
+# O repositório é público e artefatos de repositório público podem ser
+# baixados por qualquer conta do GitHub: por isso o dump sai CIFRADO (AES-256)
+# e só quem tem BACKUP_PASSPHRASE consegue abrir.
+# Segredos: BACKUP_DATABASE_URL (conexão direta do Neon) e BACKUP_PASSPHRASE.
 name: Backup do banco
 
 on:
@@ -19,20 +21,27 @@ jobs:
           echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
           sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client-16
 
-      - name: Gerar o dump
+      - name: Gerar e cifrar o dump
         env:
           DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+          PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
         run: |
           test -n "$DATABASE_URL" || { echo "Falta o segredo BACKUP_DATABASE_URL"; exit 1; }
+          # Sem senha, não gera nada: dump aberto num repositório público vazaria dados pessoais.
+          test ${#PASSPHRASE} -ge 20 || { echo "Falta o segredo BACKUP_PASSPHRASE (20+ caracteres)"; exit 1; }
           FILE="t4trips-$(date -u +%Y-%m-%d).dump"
           /usr/lib/postgresql/16/bin/pg_dump "$DATABASE_URL" --format=custom --no-owner --no-privileges --file "$FILE"
           # Confere que o arquivo abre antes de guardar.
           /usr/lib/postgresql/16/bin/pg_restore --list "$FILE" > /dev/null
-          ls -lh "$FILE"
-          echo "FILE=$FILE" >> "$GITHUB_ENV"
+          gpg --batch --yes --pinentry-mode loopback --passphrase "$PASSPHRASE" --symmetric --cipher-algo AES256 --output "$FILE.gpg" "$FILE"
+          shred -u "$FILE"
+          ls -lh "$FILE.gpg"
+          echo "FILE=$FILE.gpg" >> "$GITHUB_ENV"
 
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ env.FILE }}
           path: ${{ env.FILE }}
           retention-days: 90
+          # Já vem comprimido e cifrado.
+          compression-level: 0

@@ -6,8 +6,8 @@
 | --- | --- |
 | Frequência | Semanal, toda segunda-feira às 3h (Brasília), e também à mão quando quiser |
 | O que entra | O banco inteiro: clientes, viagens, reservas, pagamentos, despesas, auditoria |
-| Formato | `pg_dump --format=custom`; antes de guardar, o workflow confere que o arquivo abre |
-| Onde fica | Artefato privado do repositório no GitHub (Actions → Backup do banco) |
+| Formato | `pg_dump --format=custom`, cifrado com AES-256 (`.dump.gpg`); antes de cifrar, o workflow confere que o dump abre |
+| Onde fica | Artefato do repositório no GitHub (Actions → Backup do banco). **O repositório é público**: qualquer conta do GitHub consegue baixar o arquivo, mas só abre quem tiver a senha `BACKUP_PASSPHRASE` |
 | Retenção | 90 dias, ou seja, cerca de 13 cópias semanais |
 | Comprovantes | Ficam no R2, que tem durabilidade própria; não entram no dump |
 | Teste de restauração | A cada 3 meses, restaurar a cópia mais recente num banco à parte (passo a passo abaixo) |
@@ -16,17 +16,20 @@ Além disso, o Neon guarda um histórico curto do banco que permite voltar no te
 
 O que fica fora do backup e por quê:
 - **Arquivos dos comprovantes:** no banco ficam só o nome, o tipo e o checksum. Para ter cópia dos arquivos, ative a replicação do R2 ou baixe o bucket periodicamente com `rclone`.
-- **Variáveis de ambiente:** guarde uma cópia das variáveis do Render num cofre de senhas.
+- **Variáveis de ambiente:** guarde uma cópia das variáveis do Render num cofre de senhas, junto com a `BACKUP_PASSPHRASE`. Sem essa senha, nenhum backup pode ser aberto.
 
 ## Fazer um backup agora
 
-GitHub → Actions → **Backup do banco** → Run workflow. Ao terminar, o arquivo `t4trips-AAAA-MM-DD.dump` fica em Artifacts.
+GitHub → Actions → **Backup do banco** → Run workflow. Ao terminar, o arquivo `t4trips-AAAA-MM-DD.dump.gpg` fica em Artifacts. Sem os segredos `BACKUP_DATABASE_URL` e `BACKUP_PASSPHRASE`, o workflow falha de propósito e não gera nada.
 
 ## Restaurar
 
 Use isto quando o banco se perder, ou para testar a restauração. Para testar, aponte para um banco **novo** e nunca para o de produção.
 
-1. Baixe o artefato `.dump` mais recente no GitHub Actions.
+1. Baixe o artefato mais recente no GitHub Actions e decifre com a senha guardada no cofre:
+   ```bash
+   gpg --decrypt --output t4trips-AAAA-MM-DD.dump t4trips-AAAA-MM-DD.dump.gpg
+   ```
 2. Crie um banco vazio. No Neon, o mais fácil é criar uma branch nova (Branches → New branch → "empty").
 3. Restaure (precisa do cliente do Postgres 16):
    ```bash

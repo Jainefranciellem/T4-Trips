@@ -4,7 +4,7 @@ Tudo roda em planos gratuitos, com custo mensal de R$ 0 para o volume de uma mic
 
 | Serviço | O que criar | Para quê |
 | --- | --- | --- |
-| GitHub | Repositório privado com este código | Código, deploy automático e backup |
+| GitHub | Repositório `Jainefranciellem/T4-Trips` (público) | Código, deploy automático e backup cifrado |
 | Neon | Projeto Postgres 16, região São Paulo (`aws-sa-east-1`) | Banco de dados |
 | Render | Web Service a partir do `render.yaml` | API |
 | Vercel | Projeto apontando para a raiz do repositório | Site |
@@ -52,7 +52,7 @@ Verifique o domínio no Resend e preencha `RESEND_API_KEY` e `EMAIL_FROM` (ex.: 
 
 ## 6. Backup (GitHub Actions)
 
-Em Settings → Secrets and variables → Actions, crie `BACKUP_DATABASE_URL` com a conexão **direta** do Neon. O workflow `.github/workflows/backup.yml` roda toda segunda-feira e também pode ser disparado à mão. Detalhes em [backup.md](backup.md).
+Em Settings → Secrets and variables → Actions, crie `BACKUP_DATABASE_URL` com a conexão **direta** do Neon e `BACKUP_PASSPHRASE` com uma senha longa (guarde-a num cofre). O repositório é público, por isso o backup sai cifrado. O workflow `.github/workflows/backup.yml` roda toda segunda-feira e também pode ser disparado à mão. Detalhes em [backup.md](backup.md).
 
 ## Homologação e produção
 

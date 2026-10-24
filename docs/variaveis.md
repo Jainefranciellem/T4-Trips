@@ -43,6 +43,7 @@ Se as variáveis obrigatórias faltarem, a API não sobe e o log diz qual está 
 | Segredo | Para quê |
 | --- | --- |
 | `BACKUP_DATABASE_URL` | Conexão **direta** do Neon usada pelo `pg_dump` semanal |
+| `BACKUP_PASSPHRASE` | Senha (20+ caracteres) que cifra o backup. O repositório é público, então sem ela o workflow não gera nada. Guarde-a num cofre de senhas: sem ela não dá para restaurar |
 
 ## Testes
 
